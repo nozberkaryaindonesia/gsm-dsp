@@ -1,0 +1,9 @@
+SOURCES :=                  \
+           main.c           \
+           transp_in.c      \
+           transp_out.c     \
+           msgq_cfg.c       \
+           process.c        \
+           sigvec.c         \
+           dsp.c            \
+           gsm.c
