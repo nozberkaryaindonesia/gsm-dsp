@@ -1,0 +1,74 @@
+#============================================================================
+# Generic information about the component
+#============================================================================
+COMP_NAME := MESSAGE3
+COMP_PATH := $(TI_DSPLINK_DSPROOT)$(DIRSEP)src$(DIRSEP)samples$(DIRSEP)gsm-dsp
+COMP_TYPE := EXE
+COMP_TARGET := gsm-dsp.out
+
+#============================================================================
+# MAP file name
+#============================================================================
+COMP_MAP_FILE := gsm-dsp.map
+
+#============================================================================
+# User specified additional command line options for the compiler
+#============================================================================
+USR_CC_FLAGS := -I/opt/TI/DSPLIB/inc -I/opt/TI/DSPLIB/packages
+USR_CC_DEFNS := -d"TSK_MODE"
+
+#============================================================================
+# User specified additional command line options for the linker
+#============================================================================
+ifeq ("$(TI_DSPLINK_DSPOSVERSION)", "5.XX")
+USR_LD_FLAGS :=
+endif
+ifeq ("$(TI_DSPLINK_DSPOSVERSION)", "6.XX")
+USR_LD_FLAGS := $(BASE_CGTOOLSLIB)$(DIRSEP)rts64plus.lib
+endif
+
+#============================================================================
+# Standard OS libraries required during linking
+#============================================================================
+STD_LIBS :=
+
+#============================================================================
+# User specified libraries required during linking
+#============================================================================
+USR_LIBS := dsplink.lib
+USR_LIBS += dsplib.a64P
+USR_LIBS += IQmath_RAM_c64x+.lib
+USR_LIBS += IQmath_c64x+.lib
+
+ifeq ($(TI_DSPLINK_USE_POOL), 1)
+USR_LIBS += dsplinkpool.lib
+endif # ifeq ($(TI_DSPLINK_USE_POOL), 1)
+
+ifeq ($(TI_DSPLINK_USE_MPCS), 1)
+USR_LIBS += dsplinkmpcs.lib
+endif # ifeq ($(TI_DSPLINK_USE_MPCS), 1)
+
+ifeq ($(TI_DSPLINK_USE_MPLIST), 1)
+USR_LIBS += dsplinkmplist.lib
+endif # ifeq ($(TI_DSPLINK_USE_MPLIST), 1)
+
+ifeq ($(TI_DSPLINK_USE_MSGQ), 1)
+USR_LIBS += dsplinkmsg.lib
+endif # ifeq ($(TI_DSPLINK_USE_MSGQ), 1)
+
+ifeq ($(TI_DSPLINK_USE_CHNL), 1)
+USR_LIBS += dsplinkdata.lib
+endif # ifeq ($(TI_DSPLINK_USE_CHNL), 1)
+
+ifeq ($(TI_DSPLINK_USE_NOTIFY), 1)
+USR_LIBS += dsplinknotify.lib
+endif # ifeq ($(TI_DSPLINK_USE_NOTIFY), 1)
+
+ifeq ($(TI_DSPLINK_USE_RINGIO), 1)
+USR_LIBS += dsplinkringio.lib
+endif # ifeq ($(TI_DSPLINK_USE_RINGIO), 1)
+
+#============================================================================
+# Target file(s) exported from this module
+#============================================================================
+EXP_TARGETS := gsm-dsp.out
