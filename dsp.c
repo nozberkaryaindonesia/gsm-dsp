@@ -190,7 +190,6 @@ static int init_freq_shft()
 int delay(struct cxvec *in_vec, struct cxvec *out_vec, int delay)
 {
 	int ret;
-	int filt_idx;
 
 	ret = convolve(in_vec, &delay_filt[delay], out_vec);
 	if (ret < 0)
@@ -298,12 +297,12 @@ int vec_power(struct cxvec *in_vec, struct rvec *out_vec)
 {
 	int i;
 	complex *in = in_vec->data;
-	complex *out = out_vec->data;
+	short *out = out_vec->data;
 
 #ifdef INTRIN
 	int sum_r, sum_i;
 
-	for (i = 0; i < in->len; i++) {
+	for (i = 0; i < in_vec->len; i++) {
 		sum_r = ((int) in[i].real) * ((int) in[i].real);
 		sum_i = ((int) in[i].imag) * ((int) in[i].imag);
 		out[i] = (_sadd(sum_r, sum_i) >> 15);
@@ -311,7 +310,7 @@ int vec_power(struct cxvec *in_vec, struct rvec *out_vec)
 #else
 	int sum_r, sum_i;
 
-	for (i = 0; i < in->len; i++) {
+	for (i = 0; i < in_vec->len; i++) {
 		sum_r = ((int) in[i].real) * ((int) in[i].real);
 		sum_i = ((int) in[i].imag) * ((int) in[i].imag);
 		out[i] = ((sum_r + sum_i) >> 15);
@@ -333,7 +332,7 @@ int vec_power(struct cxvec *in_vec, struct rvec *out_vec)
  */
 int convolve_real(struct rvec *in, struct rvec *h, struct rvec *out)
 {
-	int pad_len, orig_idx;
+	int pad_len;
 
 	pad_len = in->len % INTERP_FILT_MIN;
 	in->len += pad_len;
@@ -390,7 +389,7 @@ int rotate(struct cxvec *in_vec, struct cxvec *out_vec, int up)
 		_rot = (unsigned *) &freq_shft_dn;
 
 	/* Why can't I cast packed 16-bit int to 'complex'? */
-	for (i = 0; i < in->len; i++) {
+	for (i = 0; i < in_vec->len; i++) {
 		_out[i] = _cmpyr(_in[i], _rot[i]);
 	}
 #else
@@ -405,7 +404,7 @@ int rotate(struct cxvec *in_vec, struct cxvec *out_vec, int up)
 	else
 		rot = freq_shft_dn.data;
 
-	for (i = 0; i < in->len; i++) {
+	for (i = 0; i < in_vec->len; i++) {
 		sum_a = (int) in[i].real * (int) rot[i].real;
 		sum_b = (int) in[i].imag * (int) rot[i].imag;
 		out[i].real = ((sum_a - sum_b) >> 15);
