@@ -1,0 +1,17 @@
+#============================================================================
+# TCONF configuration file (from component base path)
+#============================================================================
+TCF_FILE := $(TI_DSPLINK_DSPOS)$(DIRSEP)$(TI_DSPLINK_DSPOSVERSION)$(DIRSEP)$(TI_DSPLINK_DSPDEVICE)$(DIRSEP)gsm-dsp.tcf
+
+#============================================================================
+# Linker command file (from component base path)
+#============================================================================
+CMD_FILE := $(COMP_BUILD)$(DIRSEP)BIOS_$(BUILD_MODE)$(DIRSEP)$(notdir $(COMP_PATH))cfg.cmd
+CMD_FILE += $(TI_DSPLINK_DSPOS)$(DIRSEP)$(TI_DSPLINK_DSPOSVERSION)$(DIRSEP)$(TI_DSPLINK_DSPDEVICE)$(DIRSEP)gsm-dsp.cmd
+
+#============================================================================
+# Source files to be built
+#============================================================================
+SOURCES := \
+           $(COMP_BUILD)$(DIRSEP)BIOS_$(BUILD_MODE)$(DIRSEP)$(notdir $(COMP_PATH))cfg_c.c      \
+           $(COMP_BUILD)$(DIRSEP)BIOS_$(BUILD_MODE)$(DIRSEP)$(notdir $(COMP_PATH))cfg.s62

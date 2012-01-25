@@ -1,7 +1,7 @@
 #============================================================================
 # Generic information about the component
 #============================================================================
-COMP_NAME := MESSAGE3
+COMP_NAME := GSM-DSP
 COMP_PATH := $(TI_DSPLINK_DSPROOT)$(DIRSEP)src$(DIRSEP)samples$(DIRSEP)gsm-dsp
 COMP_TYPE := EXE
 COMP_TARGET := gsm-dsp.out
