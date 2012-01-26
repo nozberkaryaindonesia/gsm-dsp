@@ -24,9 +24,9 @@ void init_proc_thrd()
 	}
 
 	msgq_attrs = MSGQ_ATTRS;
-	msgq_attrs.notifyHandle = (Ptr)proc_sem_hdl;
-	msgq_attrs.pend = (MSGQ_Pend)SEM_pendBinary;
-	msgq_attrs.post = (MSGQ_Post)SEM_postBinary;
+	msgq_attrs.notifyHandle = (Ptr) proc_sem_hdl;
+	msgq_attrs.pend = (MSGQ_Pend) SEM_pendBinary;
+	msgq_attrs.post = (MSGQ_Post) SEM_postBinary;
 
 	status = MSGQ_open("proc", &msgq_proc, &msgq_attrs);
 	if (status != SYS_OK) {
@@ -34,7 +34,7 @@ void init_proc_thrd()
 	}
 }
 
-void write_teste(short *buf, int len)
+void write_test(short *buf, int len)
 {
 	int i;
 
@@ -62,28 +62,28 @@ void proc_thrd()
 		SYS_abort("Failed to locate the output message queue");
 	}
 
-	status = MSGQ_alloc(0, (MSGQ_Msg *)&msg_in, APPMSGSIZE);
+	status = MSGQ_alloc(0, (MSGQ_Msg *) &msg_in, APPMSGSIZE);
 	if (status != SYS_OK) {
 		SYS_abort("Failed to allocate a message");
 	}
 
 	MSGQ_setMsgId( (MSGQ_Msg)msg_in, DSP_PROCESSMSGID);
 	
-	status = MSGQ_put(msgq_reply, (MSGQ_Msg)msg_in);
+	status = MSGQ_put(msgq_reply, (MSGQ_Msg) msg_in);
 	if (status != SYS_OK) {
 		SYS_abort("Failed to send a message");
-	 }
+	}
 
 	msg_in = NULL;
 	msg_out = NULL;
 
 	for (;;) {
-		status = MSGQ_get(msgq_proc, (MSGQ_Msg *)&msg, SYS_FOREVER);
+		status = MSGQ_get(msgq_proc, (MSGQ_Msg *) &msg, SYS_FOREVER);
 		if (status != SYS_OK) {
 			SYS_abort("Failed to get a message");
 		}
 
-		msg_id = MSGQ_getMsgId((MSGQ_Msg)msg);
+		msg_id = MSGQ_getMsgId((MSGQ_Msg) msg);
 
 		switch (msg_id) {
 		case DSP_INPUTMSGID:

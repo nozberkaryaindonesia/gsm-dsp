@@ -71,20 +71,6 @@ void output_thrd()
 		SYS_abort("Failed to send a message");
 	}
 
-	status = MSGQ_alloc(0, (MSGQ_Msg *)&msg, APPMSGSIZE);
-	if (status != SYS_OK) {
-		SYS_abort("Failed to allocate a message");
-	}
-
-	msg->dataBuffer = NULL;
-
-	MSGQ_setMsgId( (MSGQ_Msg)msg, DSP_OUTPUTMSGID);
-
-	status = MSGQ_put(msgq_gpp, (MSGQ_Msg)msg);
-	if (status != SYS_OK) {
-		SYS_abort("Failed to send a message");
-	}
-
 	msg_proc = NULL;
 	msg_gpp = NULL;
 

@@ -31,7 +31,7 @@
 #define APP_POOL_ID	0
 #define BUFLEN		4096
 #define BUFSIZE		(DSPLINK_ALIGN(BUFLEN, DSPLINK_BUF_ALIGN))
-#define APPMSGSIZE	(DSPLINK_ALIGN(sizeof(MyMsg), DSPLINK_BUF_ALIGN)) 
+#define APPMSGSIZE	(DSPLINK_ALIGN(sizeof(struct cmsg), DSPLINK_BUF_ALIGN)) 
 
 enum {
 	GPP_OUTPUTMSGID = 0,
@@ -41,11 +41,11 @@ enum {
 	TERMINATEMSGID
 };
 
-typedef struct MyMsg {
+struct cmsg {
 	MSGQ_MsgHeader header;
 	void *dataBuffer;
 	void *procBuffer;
-} MyMsg;
+};
 
 enum sigproc_state {
 	SIGPROC_ENTRY
