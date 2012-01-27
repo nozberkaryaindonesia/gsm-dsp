@@ -64,7 +64,6 @@ int reverse_real(struct rvec *vec)
 	return 0;
 }
 
-/* Vector must be a multiple of 2 */
 int reverse_conj(struct cxvec *vec)
 {
 	int i;

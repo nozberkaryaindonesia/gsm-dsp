@@ -65,4 +65,17 @@ complex midambl_cvec_data[NUM_TSC][DEF_BUFLEN];
 struct cxvec midambl_cvecs[NUM_TSC];
 struct vec_peak midambl_peaks[NUM_TSC];
 
+/*
+ * RACH sync sequence
+ */
+#define RACH_SYNC_LEN		41
+const int rach_seq[RACH_SYNC_LEN] = {
+	0,1,0,0,1,0,1,1,0,1,1,1,1,1,1,1,
+	1,0,0,1,1,0,0,1,1,0,1,0,1,0,1,0,
+	0,0,1,1,1,1,0,0,0
+};
+
+complex rach_cvec_data[DEF_BUFLEN];
+struct cxvec rach_cvec;
+
 #endif /* _DSP_DATA_H_ */

@@ -124,11 +124,35 @@ static int init_tsc()
 	return 0;
 }
 
+static int init_rach_seq()
+{
+	int ret;
+	struct bitvec rach_bvec;
+
+	rach_bvec.len = RACH_SYNC_LEN;
+	rach_bvec.data = rach_seq;
+
+	init_cxvec(&rach_cvec, rach_bvec.len,
+		   DEF_BUFLEN, 0, rach_cvec_data);
+
+	memset(rach_cvec.buf, 0, rach_cvec.buf_len * sizeof(complex));
+
+	/* FIXME Guard interval? */
+	ret = gmsk_mod(&rach_bvec, &gsm_pls, &rach_cvec);
+	if (ret < 0)
+		return -1;
+
+	reverse_conj(&rach_cvec);
+
+	return 0;
+}
+
 static void init_gsm()
 {
 	init_dsp();
 	init_gsm_pls();
 	init_tsc();
+	init_rach_seq();
 
 	return;
 }
