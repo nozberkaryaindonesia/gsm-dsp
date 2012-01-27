@@ -39,7 +39,7 @@ void main()
 
 	attrs.name = "init_thrds";
 	attrs.stacksize = 0x1000;
-	if (TSK_create((Fxn)init_thrds, &attrs) == NULL) {
+	if (TSK_create((Fxn) init_thrds, &attrs) == NULL) {
 		SYS_abort("Failed create echo thread");
 	}
 
@@ -52,19 +52,19 @@ void init_thrds ( void )
 	
 	attrs.name = "input";
 	attrs.stacksize = 0x1000;
-	if (TSK_create((Fxn)input_thrd, &attrs) == NULL) {
+	if (TSK_create((Fxn) input_thrd, &attrs) == NULL) {
 		SYS_abort("Failed create input thread");
 	}
 
 	attrs.name = "proc";
 	attrs.stacksize = 0x1000;
-	if (TSK_create((Fxn)proc_thrd, &attrs) == NULL) {
+	if (TSK_create((Fxn) proc_thrd, &attrs) == NULL) {
 		SYS_abort("Failed create process thread");
 	}
 
 	attrs.name = "output";
 	attrs.stacksize = 0x1000;
-	if (TSK_create((Fxn)output_thrd, &attrs) == NULL) {
+	if (TSK_create((Fxn) output_thrd, &attrs) == NULL) {
 		SYS_abort("Failed create output thread");
 	}
 }

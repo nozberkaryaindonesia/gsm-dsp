@@ -28,7 +28,7 @@ void init_proc_thrd()
 	msgq_attrs.pend = (MSGQ_Pend) SEM_pendBinary;
 	msgq_attrs.post = (MSGQ_Post) SEM_postBinary;
 
-	status = MSGQ_open("proc", &msgq_proc, &msgq_attrs);
+	status = MSGQ_open("processDSP", &msgq_proc, &msgq_attrs);
 	if (status != SYS_OK) {
 		SYS_abort("Failed to open the process message queue");
 	}
@@ -52,7 +52,7 @@ void proc_thrd()
 	MSGQ_Queue msgq_reply;
 	int msg_id;
 
-	status = MSGQ_locate("output", &msgq_pass, NULL);
+	status = MSGQ_locate("outputDSP", &msgq_pass, NULL);
 	if (status != SYS_OK) {
 		SYS_abort("Failed to locate the output message queue");
 	}
@@ -104,10 +104,10 @@ void proc_thrd()
 			}
 
 			MSGQ_setMsgId((MSGQ_Msg)msg_in, DSP_PROCESSMSGID);
-			status = MSGQ_put(msgq_reply, (MSGQ_Msg)msg_in);
+			status = MSGQ_put(msgq_reply, (MSGQ_Msg) msg_in);
 
 			MSGQ_setMsgId((MSGQ_Msg)msg_out, DSP_PROCESSMSGID);
-			status = MSGQ_put(msgq_pass, (MSGQ_Msg)msg_out);
+			status = MSGQ_put(msgq_pass, (MSGQ_Msg) msg_out);
 			LOG_printf(&trace, "Process and passed msg with buffer");
 
 			msg_in = NULL;

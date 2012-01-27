@@ -22,13 +22,6 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
-/*
- * Put common vectors in the global store.
- * There should only be single global copies so do not define statically.
- * If this header is included twice something is wrong.
- * Find a better way that doesn't clutter...
- */
-
 #ifndef _DSP_FILTER_H_
 #define _DSP_FILTER_H_
 

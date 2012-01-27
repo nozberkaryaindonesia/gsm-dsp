@@ -1,7 +1,7 @@
 /*
  * dsp_intrn.h
  *
- * TI C64x+ GSM signal processing
+ * TI C64x+ GSM signal processing intrinsics
  *
  * Copyright (C) 2012 Thomas Tsou <ttsou@vt.edu>
  *
