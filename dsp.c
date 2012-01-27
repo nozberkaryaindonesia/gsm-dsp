@@ -35,8 +35,7 @@
 #include "gsm.h"
 #include "dsp.h"
 #include "dsp_filter.h"
-
-#define INTRIN
+#include "dsp_intrn.h"
 
 #define M_PIf				(3.14159265358979323846264338327f)
 
@@ -299,7 +298,12 @@ int vec_power(struct cxvec *in_vec, struct rvec *out_vec)
 	complex *in = in_vec->data;
 	short *out = out_vec->data;
 
-#ifdef INTRIN
+#ifdef INTRN_DOTP2
+	for (i = 0; i < in->len, i++) {
+		out[i] = (_dotp2((int) in[i], (int) in[i]) >> 15);
+	}
+#else
+#ifdef INTRN_SADD
 	int sum_r, sum_i;
 
 	for (i = 0; i < in_vec->len; i++) {
@@ -316,13 +320,7 @@ int vec_power(struct cxvec *in_vec, struct rvec *out_vec)
 		out[i] = ((sum_r + sum_i) >> 15);
 	}
 #endif
-
-#if 0
-	for (i = 0; i < in->len, i++) {
-		out[i] = (_dotp2((int) in[i], (int) in[i]) >> 15);
-	}
 #endif
-
 	return 0;
 }
 
@@ -377,7 +375,7 @@ int rotate(struct cxvec *in_vec, struct cxvec *out_vec, int up)
 {
 	int i;
 
-#ifdef INTRIN 
+#ifdef INTRN_CMPYR
 	/* Packed casts */
 	unsigned *_in = (unsigned *) in_vec->data;
 	unsigned *_out = (unsigned *) out_vec->data;
