@@ -506,10 +506,10 @@ int peak_detect(struct cxvec *in_vec, struct vec_peak *peak)
 	vec_power(in_vec, &pow_vec);
 
 	if ((in_vec->len % 16) == 0) {
-		peak->pow = DSP_maxval(pow_vec.data, in_vec->len);
+		peak->gain = DSP_maxval(pow_vec.data, in_vec->len);
 		max_idx = DSP_maxidx((short *) pow_vec.data, pow_vec.len);
 	} else {
-		peak->pow = maxval(pow_vec.data, in_vec->len);
+		peak->gain = maxval(pow_vec.data, in_vec->len);
 		max_idx = maxidx((short *) pow_vec.data, pow_vec.len);
 	}
 
@@ -531,12 +531,12 @@ int peak_detect(struct cxvec *in_vec, struct vec_peak *peak)
 	 * Late sample bank includes the centre sample
 	 * Keep them discrete for now to avoid confusion
 	 */
-	if ((early_pow > late_pow) && (early_pow > peak->pow)) {
-		peak->pow = early_pow;
+	if ((early_pow > late_pow) && (early_pow > peak->gain)) {
+		peak->gain = early_pow;
 		peak->whole = max_idx - 1;
 		peak->frac = DSP_maxidx(early, INTERP_FILT_M);
-	} else if ((late_pow > early_pow) && (late_pow > peak->pow)) {
-		peak->pow = late_pow;
+	} else if ((late_pow > early_pow) && (late_pow > peak->gain)) {
+		peak->gain = late_pow;
 		peak->whole = max_idx;
 		peak->frac = DSP_maxidx(late, INTERP_FILT_M);
 	} else {
@@ -545,6 +545,35 @@ int peak_detect(struct cxvec *in_vec, struct vec_peak *peak)
 	}
 
 	return 0; 
+}
+
+int norm2(complex val)
+{
+	int sum;
+
+	sum = val.real * val.real;
+	sum += val.imag * val.imag;
+
+	return sum;
+}
+
+/* Consider the case of vector roll off and zero values are included */
+/* Single sided width ignoring the adjacent two samples */
+/* Total must be a factor of 2 */
+/* Single sided width must be '4' */
+int peak_to_mean(struct cxvec *vec, int peak, int idx, int width)
+{
+	int i;
+	int sum = 0;
+
+	for (i = 2; i <= (width + 1); i++) {
+		sum = norm2(vec->data[idx - i]);
+		sum = norm2(vec->data[idx + i]);
+	}
+
+	/* For 8 samples */
+	/* Not square rooting this value so we need to make power comparisons */
+	return peak / (sum >> 3);
 }
 
 void init_dsp()

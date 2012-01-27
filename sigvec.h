@@ -34,7 +34,7 @@ struct vec_peak {
 	int orig;
 	int whole;
 	int frac;
-	int pow;
+	int gain;
 };
 
 struct cxvec {
