@@ -1,7 +1,7 @@
 /*
  * common.h
  *
- * TI C64x+ DSPLink transport 
+ * DSP/BIOS Link MSGQ transport
  *
  * Copyright (C) 2012 Thomas Tsou <ttsou@vt.edu>
  *
@@ -34,7 +34,8 @@
 #define APPMSGSIZE	(DSPLINK_ALIGN(sizeof(struct cmsg), DSPLINK_BUF_ALIGN)) 
 
 enum {
-	GPP_OUTPUTMSGID = 0,
+	GPP_INPUTMSGID = 0,
+	GPP_OUTPUTMSGID,
 	DSP_INPUTMSGID,
 	DSP_PROCESSMSGID,
 	DSP_OUTPUTMSGID,
@@ -43,8 +44,7 @@ enum {
 
 struct cmsg {
 	MSGQ_MsgHeader header;
-	void *dataBuffer;
-	void *procBuffer;
+	void *data;
 };
 
 enum sigproc_state {

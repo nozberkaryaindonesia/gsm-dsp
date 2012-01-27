@@ -40,7 +40,7 @@ void init_output_thrd()
 
 void output_thrd()
 {
-	MyMsg *msg, *msg_gpp, *msg_proc;
+	struct cmsg *msg, *msg_gpp, *msg_proc;
 	int status, msg_id;
 	MSGQ_Queue msgq_reply;
 	MSGQ_Queue msgq_gpp;
@@ -64,7 +64,7 @@ void output_thrd()
 
 	MSGQ_setMsgId( (MSGQ_Msg)msg, DSP_OUTPUTMSGID);
 
-	msg->dataBuffer = NULL;
+	msg->data = NULL;
 
 	status = MSGQ_put(msgq_reply, (MSGQ_Msg)msg);
 	if (status != SYS_OK) {
@@ -103,7 +103,7 @@ void output_thrd()
 				SYS_abort("Failed to send a message");
 			}
 		
-			BCACHE_wb(msg_proc->dataBuffer, BUFSIZE, TRUE);
+			BCACHE_wb(msg_proc->data, BUFSIZE, TRUE);
 
 			MSGQ_setMsgId( (MSGQ_Msg)msg_proc, DSP_OUTPUTMSGID);
 		

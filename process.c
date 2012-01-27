@@ -46,7 +46,7 @@ void write_test(short *buf, int len)
 
 void proc_thrd()
 {	
-	MyMsg *msg, *msg_in, *msg_out;
+	struct cmsg *msg, *msg_in, *msg_out;
 	int status;
 	MSGQ_Queue msgq_pass;
 	MSGQ_Queue msgq_reply;
@@ -98,10 +98,9 @@ void proc_thrd()
 		}
 
 		if ((msg_in != NULL) && (msg_out != NULL)) {
-			if (msg_out->dataBuffer != NULL) {
-				//write_test(msg_out->dataBuffer, 1024 * 2);
-				handle_msg(msg_in->dataBuffer, 0, msg_out->procBuffer, 0,
-				msg_out->dataBuffer, 0);
+			if (msg_out->data != NULL) {
+				//write_test(msg_out->data, 1024 * 2);
+				handle_msg(msg_in->data, 0, msg_out->data, 0);
 			}
 
 			MSGQ_setMsgId((MSGQ_Msg)msg_in, DSP_PROCESSMSGID);

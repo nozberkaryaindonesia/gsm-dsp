@@ -25,7 +25,6 @@
 #ifndef _GSM_H_
 #define _GSM_H_
 
-int handle_msg(char *in_buf, int in_len, char *proc_buf, int proc_len,
-		char *out_buf, int out_len);
+int handle_msg(char *in_buf, int in_len, char *out_buf, int out_len);
 
 #endif /*_GSM_H_ */

@@ -134,9 +134,7 @@ static void init_gsm()
 }
 
 /* Main entry point */
-int handle_msg(char *in_buf, int in_len,
-	       char *proc_buf, int proc_len,
-	       char *out_buf, int out_len)
+int handle_msg(char *in_buf, int in_len, char *out_buf, int out_len)
 {
 	int i;
 	dbg = out_buf;

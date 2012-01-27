@@ -38,7 +38,7 @@ void init_input_thrd()
 
 void input_thrd()
 {
-	MyMsg *msg, *inputMsg, *outputMsg;
+	struct cmsg *msg, *inputMsg, *outputMsg;
 	int msgqStatus;
 	MSGQ_Queue dstMsgQueue;
 	MSGQ_Queue replyMsgQueue;
@@ -86,7 +86,7 @@ void input_thrd()
 		
 		switch (msgId) {
 		case GPP_OUTPUTMSGID:
-			BCACHE_inv(msg->dataBuffer, BUFSIZE, TRUE);
+			BCACHE_inv(msg->data, BUFSIZE, TRUE);
 			outputMsg = msg;
 			break;
 		case DSP_PROCESSMSGID:
