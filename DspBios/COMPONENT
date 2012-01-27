@@ -37,8 +37,6 @@ STD_LIBS :=
 #============================================================================
 USR_LIBS := dsplink.lib
 USR_LIBS += dsplib.a64P
-USR_LIBS += IQmath_RAM_c64x+.lib
-USR_LIBS += IQmath_c64x+.lib
 
 ifeq ($(TI_DSPLINK_USE_POOL), 1)
 USR_LIBS += dsplinkpool.lib
