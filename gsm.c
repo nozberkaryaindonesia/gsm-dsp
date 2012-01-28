@@ -157,23 +157,35 @@ static void init_gsm()
 	return;
 }
 
+#define BRST_LEN		160
+complex test_data[DEF_BUFLEN];
+struct cxvec test_vec;
+
 /* Main entry point */
-int handle_msg(char *in_buf, int in_len, char *out_buf, int out_len)
+int handle_msg(char *in, int in_len, char *out, int out_len)
 {
-	int i;
-	dbg = out_buf;
+#if 1
+	struct cxvec in_vec;
+	struct vec_peak *peak = (struct vec_peak *) out;
+
+	dbg = out;
 
 	if (!start) {
 		init_gsm();
 		start = 1;
 	}
 
-	memset(dbg, 0, 512);
+	init_cxvec(&in_vec, BRST_LEN, DEF_BUFLEN, MIDAMBL_LEN, (void *) in);
+	init_cxvec(&test_vec, BRST_LEN, DEF_BUFLEN, 0, (void *) test_data);
 
+	correlate(&in_vec, &midambl_cvecs[2], &test_vec);
+	peak_detect(&test_vec, peak);
+#if 0
 	for (i = 0; i < NUM_TSC; i++) {
 		memcpy(dbg + i * sizeof(struct vec_peak), &midambl_peaks[i], sizeof(struct vec_peak));
 	}
-
+#endif
+#endif
 	return 0;
 }
 
