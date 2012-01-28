@@ -30,5 +30,6 @@ int convolve(struct cxvec *in, struct cxvec *h,struct cxvec *out);
 int correlate(struct cxvec *a, struct cxvec *b, struct cxvec *c);
 int peak_detect(struct cxvec *in_vec, struct vec_peak *peak);
 int gmsk_mod(struct bitvec *in, struct cxvec *h, struct cxvec *out);
+int rotate(struct cxvec *in_vec, struct cxvec *out_vec, int up);
 
 #endif /* _DSP_H_ */
