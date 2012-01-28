@@ -14,7 +14,7 @@ COMP_MAP_FILE := gsm-dsp.map
 #============================================================================
 # User specified additional command line options for the compiler
 #============================================================================
-USR_CC_FLAGS := -I/opt/TI/DSPLIB/inc -I/opt/TI/DSPLIB/packages
+USR_CC_FLAGS := -I/opt/TI/DSPLIB/inc -I/opt/TI/DSPLIB/packages -k -mw
 USR_CC_DEFNS := -d"TSK_MODE"
 
 #============================================================================
