@@ -202,14 +202,18 @@ int delay(struct cxvec *in_vec, struct cxvec *out_vec, int delay)
 /*
  * Modulate a bit vector with GMSK
  */
-int gmsk_mod(struct bitvec *bvec, struct cxvec *h, struct cxvec *out)
+int gmsk_mod(struct bitvec *restrict bvec,
+	     struct cxvec *restrict h,
+	     struct cxvec *restrict out)
 {
 	int i;
 	static complex in_data[DEF_BUFLEN];
+	static complex rot_data[DEF_BUFLEN];
 	static struct cxvec in_vec;
+	static struct cxvec rot_vec;
 
-	init_cxvec(&in_vec, bvec->len,
-		   DEF_BUFLEN, h->len / 2, in_data);
+	init_cxvec(&in_vec, bvec->len, DEF_BUFLEN, h->len / 2, in_data);
+	init_cxvec(&rot_vec, bvec->len, DEF_BUFLEN, h->len / 2, rot_data);
 
 	memset(in_vec.buf, 0, in_vec.buf_len * sizeof(complex));
 
@@ -218,7 +222,9 @@ int gmsk_mod(struct bitvec *bvec, struct cxvec *h, struct cxvec *out)
 		in_vec.data[i].imag = 0;
 	}
 
-	convolve(&in_vec, h, out);
+	rotate(&in_vec, &rot_vec, 1);
+
+	convolve(&rot_vec, h, out);
 
 	return 0;
 }
@@ -245,7 +251,9 @@ int cxvec_energy_detct(struct cxvec *vec)
 	return vec_norm2(vec);
 }
 
-int convolve(struct cxvec *in, struct cxvec *h, struct cxvec *out)
+int convolve(struct cxvec *restrict in,
+	     struct cxvec *restrict h,
+	     struct cxvec *restrict out)
 {
 	int pad_len;
 
@@ -280,7 +288,9 @@ int convolve(struct cxvec *in, struct cxvec *h, struct cxvec *out)
  * Skip the custom bounds for now, but they'll only be index changes after
  * the convolve, which is interally always full span.
  */
-int correlate(struct cxvec *in, struct cxvec *h, struct cxvec *out)
+int correlate(struct cxvec *restrict in,
+	      struct cxvec *restrict h,
+	      struct cxvec *restrict out)
 {
 	//DSP_q15tofl((short *) h->data, (float *) dbg, 2 * h->len);
 
@@ -328,7 +338,9 @@ int vec_power(struct cxvec *in_vec, struct rvec *out_vec)
  * Does not reset start index
  * Taps multiple of 16. Data multiples of 4.
  */
-int convolve_real(struct rvec *in, struct rvec *h, struct rvec *out)
+int convolve_real(struct rvec *restrict in,
+		  struct rvec *restrict h,
+		  struct rvec *restrict out)
 {
 	int pad_len;
 
@@ -349,7 +361,9 @@ int convolve_real(struct rvec *in, struct rvec *h, struct rvec *out)
  * Resets start index. Data must start on h->len / 2;
  * Taps multiple of 16. Data multiples of 4.
  */
-int delay_real(struct rvec *in, struct rvec *h, struct rvec *out)
+int delay_real(struct rvec *restrict in,
+	       struct rvec *restrict h,
+	       struct rvec *restrict out)
 {
 	int pad_len, orig_idx;
 
@@ -371,27 +385,28 @@ int delay_real(struct rvec *in, struct rvec *h, struct rvec *out)
 	return 0;
 }
 
-int rotate(struct cxvec *in_vec, struct cxvec *out_vec, int up)
+int rotate(struct cxvec *restrict in_vec, struct cxvec *restrict out_vec, int up)
 {
 	int i;
 
 #ifdef INTRN_CMPYR
 	/* Packed casts */
-	unsigned *_in = (unsigned *) in_vec->data;
-	unsigned *_out = (unsigned *) out_vec->data;
-	unsigned *_rot;
+	unsigned *restrict _in = (unsigned *) in_vec->data;
+	unsigned *restrict _out = (unsigned *) out_vec->data;
+	unsigned *restrict _rot;
 
 	if (up)
 		_rot = (unsigned *) &freq_shft_up;
 	else
 		_rot = (unsigned *) &freq_shft_dn;
 
-	/* Why can't I cast packed 16-bit int to 'complex'? */
+	/* Possibly create special case for RACH (41) */
+	#pragma MUST_ITERATE(16, 160, 2)
+	#pragma UNROLL(2)
 	for (i = 0; i < in_vec->len; i++) {
 		_out[i] = _cmpyr(_in[i], _rot[i]);
 	}
 #else
-	struct cxvec *rot;
 	int sum_a, sum_b;
 	complex *in = in_vec->data;
 	complex *out = out_vec->data;
@@ -485,7 +500,7 @@ int maxidx(short *in, int len)
  * Watch for overflow? use Q31 values?
  * FIXME: Must be multiple of 16 and >= 48
 */
-int peak_detect(struct cxvec *in_vec, struct vec_peak *peak)
+int peak_detect(struct cxvec *restrict in_vec, struct vec_peak *restrict peak)
 {
 	int i;
 	int m = INTERP_FILT_M;
@@ -561,7 +576,7 @@ int norm2(complex val)
 /* Single sided width ignoring the adjacent two samples */
 /* Total must be a factor of 2 */
 /* Single sided width must be '4' */
-int peak_to_mean(struct cxvec *vec, int peak, int idx, int width)
+int peak_to_mean(struct cxvec * vec, int peak, int idx, int width)
 {
 	int i;
 	int sum = 0;
