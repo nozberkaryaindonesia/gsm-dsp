@@ -1,7 +1,7 @@
 /*
- * dsp.h
+ * TI C64x+ GSM signal processing
  *
- * Copyright (C) 2012  Thomas Tsou <ttsou@vt.edu>
+ * Copyright (C) 2012 Thomas Tsou <ttsou@vt.edu>
  *
  * All Rights Reserved
  *
@@ -24,12 +24,16 @@
 #define _DSP_H_
 
 #include "sigvec.h"
+#include "convolve.h"
+#include "gmsk.h"
+#include "delay.h"
+#include "peak_detect.h"
+
+#define DEF_MAXLEN		256
+#define M_PIf			(3.14159265358979323846264338327f)
+
+float sinc(float x);
 
 void init_dsp();
-int convolve(struct cxvec *in, struct cxvec *h,struct cxvec *out);
-int correlate(struct cxvec *a, struct cxvec *b, struct cxvec *c);
-int peak_detect(struct cxvec *in_vec, struct vec_peak *peak);
-int gmsk_mod(struct bitvec *in, struct cxvec *h, struct cxvec *out);
-int rotate(struct cxvec *in_vec, struct cxvec *out_vec, int up);
 
 #endif /* _DSP_H_ */

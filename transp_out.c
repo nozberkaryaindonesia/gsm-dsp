@@ -16,6 +16,8 @@
 static MSGQ_Queue msgq_out;
 extern LOG_Obj trace;
 
+extern void write_test(float *buf, int len, int val);
+
 void init_output_thrd()
 {
 	int status;
@@ -43,11 +45,12 @@ void output_thrd()
 {
 	struct cmsg *msg, *msg_gpp, *msg_proc;
 	int status, msg_id;
-	MSGQ_Queue msgq_reply;
-	MSGQ_Queue msgq_gpp;
+	MSGQ_Queue msgq_proc_dsp;
+	MSGQ_Queue msgq_gpp_in;
 	MSGQ_LocateAttrs sync_locate_attrs;
+	int msg_cnt = 0;
 
-	status = MSGQ_locate("processDSP", &msgq_reply, NULL);
+	status = MSGQ_locate("processDSP", &msgq_proc_dsp, NULL);
 
 	if (status != SYS_OK) {
 		SYS_abort("Failed to locate the reply message queue");
@@ -56,7 +59,7 @@ void output_thrd()
 	status = SYS_ENOTFOUND;
 	while ((status == SYS_ENOTFOUND) || (status == SYS_ENODEV)) {
 		sync_locate_attrs.timeout = SYS_FOREVER;
-		status = MSGQ_locate("inputGPP", &msgq_gpp, &sync_locate_attrs);
+		status = MSGQ_locate("inputGPP", &msgq_gpp_in, &sync_locate_attrs);
 		if ((status == SYS_ENOTFOUND) || (status == SYS_ENODEV)) {
 			TSK_sleep(1000);
 		}
@@ -74,7 +77,7 @@ void output_thrd()
 
 	msg->data = NULL;
 
-	status = MSGQ_put(msgq_reply, (MSGQ_Msg) msg);
+	status = MSGQ_put(msgq_proc_dsp, (MSGQ_Msg) msg);
 	if (status != SYS_OK) {
 		SYS_abort("Failed to send a message");
 	}
@@ -106,16 +109,20 @@ void output_thrd()
 		if ((msg_proc != NULL) && (msg_gpp != NULL)) {
 			MSGQ_setMsgId((MSGQ_Msg) msg_gpp, DSP_OUTPUTMSGID);
 		
-			status = MSGQ_put(msgq_reply, (MSGQ_Msg) msg_gpp);
+			status = MSGQ_put(msgq_proc_dsp, (MSGQ_Msg) msg_gpp);
 			if (status != SYS_OK) {
 				SYS_abort("Failed to send a message");
 			}
-		
-			BCACHE_wb(msg_proc->data, BUFSIZE, TRUE);
+
+			if (msg_cnt > 0) {
+				//write_test((float *) msg_proc->data, 32 * 2, msg_cnt);
+				BCACHE_wb(msg_proc->data, BUFSIZE, TRUE);
+			}
+			msg_cnt++;
 
 			MSGQ_setMsgId((MSGQ_Msg) msg_proc, DSP_OUTPUTMSGID);
 
-			status = MSGQ_put(msgq_gpp, (MSGQ_Msg) msg_proc);
+			status = MSGQ_put(msgq_gpp_in, (MSGQ_Msg) msg_proc);
 			if (status != SYS_OK) {
 				SYS_abort("Failed to send a message");
 			}

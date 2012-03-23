@@ -38,14 +38,14 @@ void init_input_thrd()
 
 void input_thrd()
 {
-	struct cmsg *msg, *inputMsg, *outputMsg;
+	struct cmsg *msg, *procMsg, *gppMsg;
 	int status;
-	MSGQ_Queue dstMsgQueue;
-	MSGQ_Queue replyMsgQueue;
+	MSGQ_Queue procMsgQueue;
+	MSGQ_Queue gppMsgQueue;
 	MSGQ_LocateAttrs syncLocateAttrs;
 	Int msgId;
 
-	status = MSGQ_locate("processDSP", &dstMsgQueue, NULL);
+	status = MSGQ_locate("processDSP", &procMsgQueue, NULL);
 	if (status != SYS_OK) {
 		SYS_abort("Failed to locate the process message queue");
 	 }
@@ -53,7 +53,7 @@ void input_thrd()
 	status = SYS_ENOTFOUND;
 	while ((status == SYS_ENOTFOUND) || (status == SYS_ENODEV)) {
 		syncLocateAttrs.timeout = SYS_FOREVER;
-		status = MSGQ_locate("outputGPP", &replyMsgQueue, &syncLocateAttrs);
+		status = MSGQ_locate("outputGPP", &gppMsgQueue, &syncLocateAttrs);
 		if ((status == SYS_ENOTFOUND) || (status == SYS_ENODEV)) {
 			TSK_sleep(1000);
 		}
@@ -62,39 +62,39 @@ void input_thrd()
 		}
 	}
 
-	status = MSGQ_alloc(0, (MSGQ_Msg *) &inputMsg, APPMSGSIZE);
+	status = MSGQ_alloc(0, (MSGQ_Msg *) &procMsg, APPMSGSIZE);
 	if (status != SYS_OK) {
 		SYS_abort("Failed to allocate a message");
 	}
 
-	MSGQ_setMsgId((MSGQ_Msg) inputMsg, DSP_INPUTMSGID);
-	status = MSGQ_put(replyMsgQueue, (MSGQ_Msg) inputMsg);
+	MSGQ_setMsgId((MSGQ_Msg) procMsg, DSP_INPUTMSGID);
+	status = MSGQ_put(gppMsgQueue, (MSGQ_Msg) procMsg);
 	if (status != SYS_OK) {
 		SYS_abort("Failed to send a message");
 	}
 
-	inputMsg = NULL;
-	outputMsg = NULL;
+	procMsg = NULL;
+	gppMsg = NULL;
 
 	for (;;) {
-		status = MSGQ_get(msgq_in, (MSGQ_Msg *)&msg, SYS_FOREVER);
+		status = MSGQ_get(msgq_in, (MSGQ_Msg *) &msg, SYS_FOREVER);
 		if (status != SYS_OK) {
 			SYS_abort("Failed to get a message from GPP");
 		}
 		
-		msgId = MSGQ_getMsgId((MSGQ_Msg)msg);
+		msgId = MSGQ_getMsgId((MSGQ_Msg) msg);
 		
 		switch (msgId) {
 		case GPP_OUTPUTMSGID:
 			BCACHE_inv(msg->data, BUFSIZE, TRUE);
-			outputMsg = msg;
+			gppMsg = msg;
 			break;
 		case DSP_PROCESSMSGID:
-			inputMsg = msg;
+			procMsg = msg;
 			break;
 		case TERMINATEMSGID:
-			inputMsg = msg;
-			status = MSGQ_put(replyMsgQueue, (MSGQ_Msg) inputMsg);
+			procMsg = msg;
+			status = MSGQ_put(gppMsgQueue, (MSGQ_Msg) procMsg);
 			if (status != SYS_OK) {
 				SYS_abort("Failed to send a GPP message back");
 			}
@@ -103,22 +103,22 @@ void input_thrd()
 			break;
 		}
 		
-		if ((inputMsg != NULL) && (outputMsg != NULL)) {
-			status = MSGQ_put(replyMsgQueue, (MSGQ_Msg)inputMsg);
+		if ((procMsg != NULL) && (gppMsg != NULL)) {
+			status = MSGQ_put(gppMsgQueue, (MSGQ_Msg) procMsg);
 			if (status != SYS_OK) {
 				SYS_abort("Failed to send a GPP message back");
 			}
 
-			MSGQ_setMsgId((MSGQ_Msg)outputMsg, DSP_INPUTMSGID);
+			MSGQ_setMsgId((MSGQ_Msg) gppMsg, DSP_INPUTMSGID);
 
-			status = MSGQ_put(dstMsgQueue, (MSGQ_Msg)outputMsg);
+			status = MSGQ_put(procMsgQueue, (MSGQ_Msg) gppMsg);
 			if (status != SYS_OK) {
 				SYS_abort("Failed to send a message to process function");
 			}
 			LOG_printf(&trace, "Sending input msg to Processing TSK");
 
-			inputMsg = NULL;
-			outputMsg = NULL;
+			procMsg = NULL;
+			gppMsg = NULL;
 		}
 	}
 }

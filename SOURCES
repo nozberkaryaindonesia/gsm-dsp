@@ -1,9 +1,15 @@
-SOURCES :=                  \
-           main.c           \
-           transp_in.c      \
-           transp_out.c     \
-           msgq_cfg.c       \
-           process.c        \
-           sigvec.c         \
-           dsp.c            \
-           gsm.c
+SOURCES :=                        \
+           main.c                 \
+           transp_in.c            \
+           transp_out.c           \
+           msgq_cfg.c             \
+           process.c              \
+           dsp/sigvec.c           \
+           dsp/convolve.c         \
+           dsp/gmsk.c             \
+           dsp/delay.c            \
+           dsp/peak_detect.c      \
+           dsp/dsp.c              \
+           gsm/gsm.c              \
+           gsm/rach.c             \
+           gsm/normal.c

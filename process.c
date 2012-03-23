@@ -6,7 +6,7 @@
 #include <msgq.h>
 
 #include "common.h"
-#include "gsm.h"
+#include "msg.h"
 
 extern LOG_Obj trace;
 static MSGQ_Queue msgq_proc;
@@ -34,48 +34,49 @@ void init_proc_thrd()
 	}
 }
 
-void write_test(short *buf, int len)
+void write_test(float *buf, int len, int val)
 {
 	int i;
 
 	for (i=0; i < len; i++) {
-		buf[2*i + 0] = i;
-		buf[2*i + 1] = -i;
+		buf[2*i + 0] = (float) val;
+		buf[2*i + 1] = (float) val;
 	}
 }
 
 void proc_thrd()
 {	
-	struct cmsg *msg, *msg_in, *msg_out;
+	struct cmsg *msg, *msg_dsp_in, *msg_dsp_out;
 	int status;
-	MSGQ_Queue msgq_pass;
-	MSGQ_Queue msgq_reply;
+	MSGQ_Queue msgq_dsp_out;
+	MSGQ_Queue msgq_dsp_in;
 	int msg_id;
+	int msg_cnt = 0;
 
-	status = MSGQ_locate("outputDSP", &msgq_pass, NULL);
+	status = MSGQ_locate("outputDSP", &msgq_dsp_out, NULL);
 	if (status != SYS_OK) {
 		SYS_abort("Failed to locate the output message queue");
 	}
 
-	status = MSGQ_locate("inputDSP", &msgq_reply, NULL);
+	status = MSGQ_locate("inputDSP", &msgq_dsp_in, NULL);
 	if (status != SYS_OK) {
 		SYS_abort("Failed to locate the output message queue");
 	}
 
-	status = MSGQ_alloc(0, (MSGQ_Msg *) &msg_in, APPMSGSIZE);
+	status = MSGQ_alloc(0, (MSGQ_Msg *) &msg_dsp_in, APPMSGSIZE);
 	if (status != SYS_OK) {
 		SYS_abort("Failed to allocate a message");
 	}
 
-	MSGQ_setMsgId( (MSGQ_Msg)msg_in, DSP_PROCESSMSGID);
+	MSGQ_setMsgId( (MSGQ_Msg) msg_dsp_in, DSP_PROCESSMSGID);
 	
-	status = MSGQ_put(msgq_reply, (MSGQ_Msg) msg_in);
+	status = MSGQ_put(msgq_dsp_in, (MSGQ_Msg) msg_dsp_in);
 	if (status != SYS_OK) {
 		SYS_abort("Failed to send a message");
 	}
 
-	msg_in = NULL;
-	msg_out = NULL;
+	msg_dsp_in = NULL;
+	msg_dsp_out = NULL;
 
 	for (;;) {
 		status = MSGQ_get(msgq_proc, (MSGQ_Msg *) &msg, SYS_FOREVER);
@@ -87,32 +88,32 @@ void proc_thrd()
 
 		switch (msg_id) {
 		case DSP_INPUTMSGID:
-			msg_in = msg;
+			msg_dsp_in = msg;
 			break;
 		case DSP_OUTPUTMSGID:
-			msg_out = msg;
+			msg_dsp_out = msg;
 			break;
 		default:
 			SYS_abort("Unknown message received");
 			break;
 		}
 
-		if ((msg_in != NULL) && (msg_out != NULL)) {
-			if (msg_out->data != NULL) {
-				//write_test(msg_out->data, 1024 * 2);
-				handle_msg(msg_in->data, 0, msg_out->data, 0);
+		if ((msg_dsp_in != NULL) && (msg_dsp_out != NULL)) {
+			if (msg_cnt > 0) {
+				handle_msg(msg_dsp_in->data, 0, msg_dsp_out->data, 0);
+				//write_test((float *) msg_dsp_out->data, 32 * 2, msg_cnt);
 			}
+			msg_cnt++;
 
-			MSGQ_setMsgId((MSGQ_Msg)msg_in, DSP_PROCESSMSGID);
-			status = MSGQ_put(msgq_reply, (MSGQ_Msg) msg_in);
+			MSGQ_setMsgId((MSGQ_Msg)msg_dsp_in, DSP_PROCESSMSGID);
+			status = MSGQ_put(msgq_dsp_in, (MSGQ_Msg) msg_dsp_in);
 
-			MSGQ_setMsgId((MSGQ_Msg)msg_out, DSP_PROCESSMSGID);
-			status = MSGQ_put(msgq_pass, (MSGQ_Msg) msg_out);
+			MSGQ_setMsgId((MSGQ_Msg)msg_dsp_out, DSP_PROCESSMSGID);
+			status = MSGQ_put(msgq_dsp_out, (MSGQ_Msg) msg_dsp_out);
 			LOG_printf(&trace, "Process and passed msg with buffer");
 
-			msg_in = NULL;
-			msg_out = NULL;
+			msg_dsp_in = NULL;
+			msg_dsp_out = NULL;
 		}
 	}
 }
-

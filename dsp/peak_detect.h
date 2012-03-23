@@ -1,9 +1,7 @@
 /*
- * gsm.h
+ * TI c64x+ GSM signal processing
  *
- * TI C64x+ GSM signal processing
- *
- * Copyright (C) 2012 Thomas Tsou <ttsou@vt.edu>
+ * Copyright (C) 2012  Thomas Tsou <ttsou@vt.edu>
  *
  * All Rights Reserved
  *
@@ -22,9 +20,19 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
-#ifndef _GSM_H_
-#define _GSM_H_
+#ifndef _PEAK_DETECT_H_
+#define _PEAK_DETECT_H_
 
-int handle_msg(char *in_buf, int in_len, char *out_buf, int out_len);
+#include "sigvec.h"
 
-#endif /*_GSM_H_ */
+struct vec_peak {
+        int orig;
+        int whole;
+        int frac;
+        int gain;
+};
+
+void init_peak_detect();
+int cxvec_peak_detect(struct cxvec *restrict in, struct vec_peak *restrict peak);
+
+#endif /* _PEAK_DETECT_H */
