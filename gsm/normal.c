@@ -24,6 +24,8 @@
 #include "normal.h"
 #include "../dsp/dsp.h"
 
+extern char *dbg;
+
 #define USE_TSC			0
 #define NUM_TSC			8
 #define TSC_LEN			26
@@ -107,6 +109,7 @@ static int init_tsc(struct cxvec *pls)
 			return -1;
 
 		cxvec_rvrs(&midambl_cvecs[i]);
+		midambl_cvecs[i].flags |= CXVEC_FLG_REVERSE;
 	}
 #if 0
 	/* Autocorrelation */
@@ -144,6 +147,9 @@ int detect_tsc(struct cxvec *in)
 	rc = cxvec_correlate(in, &midambl_cvecs[USE_TSC], &corr_out, CONV_NO_DELAY);
 	if (rc < 0)
 		return -1;
+
+	DSP_q15tofl(corr_out.data, dbg, 156 * 2);
+	return 0;
 
 	rc = cxvec_peak_detect(&corr_out, &peak);
 	if (rc < 0)

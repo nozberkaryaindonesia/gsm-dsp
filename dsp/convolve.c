@@ -43,6 +43,7 @@ static int cxvec_conv_no_delay(struct cxvec *restrict in,
 		     (short *) h->data,
 		     (short *) out->data,
 		     h->len, in->len);
+
 	return 0;
 }
 

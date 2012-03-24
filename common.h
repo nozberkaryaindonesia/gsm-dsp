@@ -29,7 +29,7 @@
 #include <dsplink.h>
 
 #define APP_POOL_ID	0
-#define BUFLEN		1024
+#define BUFLEN		4096
 #define BUFSIZE		(DSPLINK_ALIGN(BUFLEN, DSPLINK_BUF_ALIGN))
 #define APPMSGSIZE	(DSPLINK_ALIGN(sizeof(struct cmsg), DSPLINK_BUF_ALIGN)) 
 

@@ -94,6 +94,15 @@ static void test_rach(char *in, char *out)
 	detect_rach(&in_vec);
 }
 
+static void test_tsc(char *in, char *out)
+{
+	struct cxvec in_vec;
+
+	cxvec_init(&in_vec, 156, DEF_MAXLEN, 44, (complex *) in);
+
+	detect_tsc(&in_vec);
+}
+
 /* Main entry point */
 int handle_msg(char *in, int in_len, char *out, int out_len)
 {
@@ -105,6 +114,7 @@ int handle_msg(char *in, int in_len, char *out, int out_len)
 	}
 
 	//test_rach(in, out);
+	test_tsc(in, out);
 
 	//DSP_q15tofl(in, (float *) dbg, 156 * 2);
 
