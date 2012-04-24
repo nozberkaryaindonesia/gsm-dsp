@@ -25,10 +25,10 @@
 
 extern char *dbg;
 
-#define INTERP_FILT_M			32
-#define INTERP_FILT_WIDTH		16 
-#define INTERP_FILT_RATE		(INTERP_FILT_M * GSMRATE)
-#define INTERP_FILT_MIN			4
+#define INTERP_FILT_M                   16
+#define INTERP_FILT_WIDTH               32
+#define INTERP_FILT_RATE                (INTERP_FILT_M * GSMRATE)
+#define INTERP_FILT_MIN                 4
 
 /*
  * Interpolating filterbank
@@ -37,8 +37,8 @@ extern char *dbg;
 short interp_filt_data[INTERP_FILT_M][INTERP_FILT_WIDTH];
 struct rvec interp_filt[INTERP_FILT_M];
 
-static short early[INTERP_FILT_M];
-static short late[INTERP_FILT_M];
+static short early[8 * INTERP_FILT_M];
+static short late[8 * INTERP_FILT_M];
 static short power_buf[DEF_MAXLEN];
 struct rvec pow_vec;
 
@@ -74,8 +74,6 @@ static int init_interp_filt()
 	for (i = 0; i < prot_filt_len; i++) {
 		prot_filt_f[i] = sinc(((float) i - midpt) / m);
 	}
-
-	//flt_scale_h(prot_filt_f, prot_filt_len, SCALE_DC_GAIN);
 
 	DSP_fltoq15(prot_filt_f, prot_filt_i, prot_filt_len);
 
@@ -116,7 +114,7 @@ static int interp_pts(struct rvec *in, short idx,
 
 int cxvec_peak_detect(struct cxvec *restrict in, struct vec_peak *restrict peak)
 {
-	int i;
+	int i, n;
 	int m = INTERP_FILT_M;
 	short early_pow, late_pow;
 
@@ -125,15 +123,61 @@ int cxvec_peak_detect(struct cxvec *restrict in, struct vec_peak *restrict peak)
 	peak->gain = maxval(pow_vec.data, in->len);
 	peak->orig = maxidx(pow_vec.data, in->len);
 
+	//n = -32;
+	n = 0;
+
 	/* Drop back one sample so we do early / late  in the same pass */
 	for (i = 0; i < m; i++) {
-		interp_pts(&pow_vec, peak->orig - 1, i, &early[i], &late[i]);
+		interp_pts(&pow_vec, peak->orig + n +  0, i, &early[0 * INTERP_FILT_M + i], &late[0 * INTERP_FILT_M + i]);
 	}                                                                                                    
-	//DSP_q15tofl(early, dbg, INTERP_FILT_M);
-	//return 0;
+	for (i = 0; i < m; i++) {                                                                            
+		interp_pts(&pow_vec, peak->orig + n +  2, i, &early[1 * INTERP_FILT_M + i], &late[1 * INTERP_FILT_M + i]);
+	}                                                                                                    
+	for (i = 0; i < m; i++) {                                                                            
+		interp_pts(&pow_vec, peak->orig + n +  4, i, &early[2 * INTERP_FILT_M + i], &late[2 * INTERP_FILT_M + i]);
+	}                                                                                                    
+	for (i = 0; i < m; i++) {                                                                            
+		interp_pts(&pow_vec, peak->orig + n +  6, i, &early[3 * INTERP_FILT_M + i], &late[3 * INTERP_FILT_M + i]);
+	}                                                                       
+                                                                                
+	for (i = 0; i < m; i++) {                                               
+		interp_pts(&pow_vec, peak->orig + n +  8, i, &early[4 * INTERP_FILT_M + i], &late[4 * INTERP_FILT_M + i]);
+	}                                                                         
+	for (i = 0; i < m; i++) {                                                 
+		interp_pts(&pow_vec, peak->orig + n + 10, i, &early[5 * INTERP_FILT_M + i], &late[5 * INTERP_FILT_M + i]);
+	}                                                                      
+	for (i = 0; i < m; i++) {                                              
+		interp_pts(&pow_vec, peak->orig + n + 12, i, &early[6 * INTERP_FILT_M + i], &late[6 * INTERP_FILT_M + i]);
+	}                                                                      
+	for (i = 0; i < m; i++) {                                              
+		interp_pts(&pow_vec, peak->orig + n + 14, i, &early[7 * INTERP_FILT_M + i], &late[7 * INTERP_FILT_M + i]);
+	}
 
 	early_pow = maxval(early, INTERP_FILT_M);
 	late_pow = maxval(late, INTERP_FILT_M);
+
+	/* Gain is fucked up until we deal with it */
+	peak->gain = 0;
+
+	DSP_q15tofl(early + 0 * INTERP_FILT_M, ((float *) dbg) + 0  * INTERP_FILT_M, INTERP_FILT_M);
+	DSP_q15tofl(late  + 0 * INTERP_FILT_M, ((float *) dbg) + 1  * INTERP_FILT_M, INTERP_FILT_M);
+	DSP_q15tofl(early + 1 * INTERP_FILT_M, ((float *) dbg) + 2  * INTERP_FILT_M, INTERP_FILT_M);
+	DSP_q15tofl(late  + 1 * INTERP_FILT_M, ((float *) dbg) + 3  * INTERP_FILT_M, INTERP_FILT_M);
+	DSP_q15tofl(early + 2 * INTERP_FILT_M, ((float *) dbg) + 4  * INTERP_FILT_M, INTERP_FILT_M);
+	DSP_q15tofl(late  + 2 * INTERP_FILT_M, ((float *) dbg) + 5  * INTERP_FILT_M, INTERP_FILT_M);
+	DSP_q15tofl(early + 3 * INTERP_FILT_M, ((float *) dbg) + 6  * INTERP_FILT_M, INTERP_FILT_M);
+	DSP_q15tofl(late  + 3 * INTERP_FILT_M, ((float *) dbg) + 7  * INTERP_FILT_M, INTERP_FILT_M);
+
+	DSP_q15tofl(early + 4 * INTERP_FILT_M, ((float *) dbg) + 8  * INTERP_FILT_M, INTERP_FILT_M);
+	DSP_q15tofl(late  + 4 * INTERP_FILT_M, ((float *) dbg) + 9  * INTERP_FILT_M, INTERP_FILT_M);
+	DSP_q15tofl(early + 5 * INTERP_FILT_M, ((float *) dbg) + 10 * INTERP_FILT_M, INTERP_FILT_M);
+	DSP_q15tofl(late  + 5 * INTERP_FILT_M, ((float *) dbg) + 11 * INTERP_FILT_M, INTERP_FILT_M);
+	DSP_q15tofl(early + 6 * INTERP_FILT_M, ((float *) dbg) + 12 * INTERP_FILT_M, INTERP_FILT_M);
+	DSP_q15tofl(late  + 6 * INTERP_FILT_M, ((float *) dbg) + 13 * INTERP_FILT_M, INTERP_FILT_M);
+	DSP_q15tofl(early + 7 * INTERP_FILT_M, ((float *) dbg) + 14 * INTERP_FILT_M, INTERP_FILT_M);
+	DSP_q15tofl(late  + 7 * INTERP_FILT_M, ((float *) dbg) + 15 * INTERP_FILT_M, INTERP_FILT_M);
+
+	return 0;
 
 	/*
 	 * Late sample bank includes the centre sample
@@ -166,22 +210,23 @@ void init_peak_detect()
 	memset(pow_vec.buf, 0, pow_vec.buf_len * sizeof(short));
 }
 
-
+#if 0
 /* Consider the case of vector roll off and zero values are included */
 /* Single sided width ignoring the adjacent two samples */
 /* Total must be a factor of 2 */
 /* Single sided width must be '4' */
-int peak_to_mean(struct cxvec * vec, int peak, int idx, int width)
+int peak_to_mean(struct rvec * vec, int peak, int idx, int width)
 {
 	int i;
 	int sum = 0;
 
 	for (i = 2; i <= (width + 1); i++) {
-		sum += norm2(vec->data[idx - i]);
-		sum += norm2(vec->data[idx + i]);
+		sum = norm2(vec->data[idx - i]);
+		sum = norm2(vec->data[idx + i]);
 	}
 
 	/* For 8 samples */
 	/* Not square rooting this value so we need to make power comparisons */
-	return ((peak >> 2) > (sum >> 3));
+	return peak / (sum >> 3);
 }
+#endif

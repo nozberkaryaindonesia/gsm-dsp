@@ -38,7 +38,7 @@ void init_input_thrd()
 
 void input_thrd()
 {
-	struct cmsg *msg, *procMsg, *gppMsg;
+	struct link_msg *msg, *procMsg, *gppMsg;
 	int status;
 	MSGQ_Queue procMsgQueue;
 	MSGQ_Queue gppMsgQueue;
@@ -68,6 +68,8 @@ void input_thrd()
 	}
 
 	MSGQ_setMsgId((MSGQ_Msg) procMsg, DSP_INPUTMSGID);
+	procMsg->data = NULL;
+
 	status = MSGQ_put(gppMsgQueue, (MSGQ_Msg) procMsg);
 	if (status != SYS_OK) {
 		SYS_abort("Failed to send a message");

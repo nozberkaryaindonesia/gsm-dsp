@@ -1,7 +1,5 @@
 /*
- * common.h
- *
- * DSP/BIOS Link MSGQ transport
+ * TI C64x+ GSM signal processing
  *
  * Copyright (C) 2012 Thomas Tsou <ttsou@vt.edu>
  *
@@ -22,28 +20,21 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
-#ifndef _COMMON_H_
-#define _COMMON_H_
+#ifndef _GSM_HDR_H_
+#define _GSM_HDR_H_
 
-#include <msgq.h>
-#include <dsplink.h>
-#include "msgid.h"
+typedef unsigned short uint16_t;
+typedef unsigned int uint32_t;
 
-#define APP_POOL_ID	0
-#define BUFLEN		4096
-#define BUFSIZE		(DSPLINK_ALIGN(BUFLEN, DSPLINK_BUF_ALIGN))
-#define APPMSGSIZE	(DSPLINK_ALIGN(sizeof(struct link_msg), DSPLINK_BUF_ALIGN)) 
-
-struct link_msg {
-	MSGQ_MsgHeader header;
-	int pool_id;
-	int buf_id;
-	int buf_sz;
-	void *data;
+struct gsm_hdr {
+	struct {
+		uint32_t tn;
+		uint32_t fn;
+	} time;
+	uint16_t data_offset;
+	uint16_t data_len;
+	uint16_t toa;
+	uint16_t rssi;
 };
 
-enum sigproc_state {
-	SIGPROC_ENTRY
-};
-
-#endif /* _COMMON_H_ */
+#endif /* _BTS_HDR_H_ */

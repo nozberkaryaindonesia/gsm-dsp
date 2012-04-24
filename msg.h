@@ -1,7 +1,5 @@
 /*
- * common.h
- *
- * DSP/BIOS Link MSGQ transport
+ * TI C64x+ MSG signal processing
  *
  * Copyright (C) 2012 Thomas Tsou <ttsou@vt.edu>
  *
@@ -22,28 +20,9 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
-#ifndef _COMMON_H_
-#define _COMMON_H_
+#ifndef _MSG_H_
+#define _MSG_H_
 
-#include <msgq.h>
-#include <dsplink.h>
-#include "msgid.h"
+int handle_msg(char *in_buf, int in_len, char *out_buf, int out_len);
 
-#define APP_POOL_ID	0
-#define BUFLEN		4096
-#define BUFSIZE		(DSPLINK_ALIGN(BUFLEN, DSPLINK_BUF_ALIGN))
-#define APPMSGSIZE	(DSPLINK_ALIGN(sizeof(struct link_msg), DSPLINK_BUF_ALIGN)) 
-
-struct link_msg {
-	MSGQ_MsgHeader header;
-	int pool_id;
-	int buf_id;
-	int buf_sz;
-	void *data;
-};
-
-enum sigproc_state {
-	SIGPROC_ENTRY
-};
-
-#endif /* _COMMON_H_ */
+#endif /*_MSG_H_ */

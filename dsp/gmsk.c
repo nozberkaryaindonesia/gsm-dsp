@@ -33,7 +33,7 @@ extern char *dbg;
 /*
  * 1/4 sample rate frequency shift vector
  */
-#define FREQ_SHFT_SCALE			0.2
+#define FREQ_SHFT_SCALE			0.9
 
 static complex freq_shft_up_data[DEF_MAXLEN];
 static complex freq_shft_dn_data[DEF_MAXLEN];
@@ -63,15 +63,15 @@ static int init_freq_shft()
 	fvec = (float *) malloc(freq_shft_up.len * 2 * sizeof(float));
 
 	for (i = 0; i < freq_shft_up.len; i++) {
-		fvec[2*i + 0] = sin(2*M_PIf*((float) i / 4)) / FREQ_SHFT_SCALE;
-		fvec[2*i + 1] = cos(2*M_PIf*((float) i / 4)) / FREQ_SHFT_SCALE;
+		fvec[2*i + 0] = sin(M_PIf*((float) i / 2)) / FREQ_SHFT_SCALE;
+		fvec[2*i + 1] = cos(M_PIf*((float) i / 2)) / FREQ_SHFT_SCALE;
 	}
 
 	DSP_fltoq15(fvec, (short *) freq_shft_up.data, freq_shft_up.len * 2);
 
 	for (i = 0; i < freq_shft_dn.len; i++) {
-		fvec[2*i + 0] = sin(2*M_PIf*((float) -i / 4)) / FREQ_SHFT_SCALE;
-		fvec[2*i + 1] = cos(2*M_PIf*((float) -i / 4)) / FREQ_SHFT_SCALE;
+		fvec[2*i + 0] = sin(M_PIf*((float) -i / 2)) / FREQ_SHFT_SCALE;
+		fvec[2*i + 1] = cos(M_PIf*((float) -i / 2)) / FREQ_SHFT_SCALE;
 	}
 
 	DSP_fltoq15(fvec, (short *) freq_shft_dn.data, freq_shft_dn.len * 2);
@@ -155,22 +155,65 @@ int gmsk_mod(struct bitvec *restrict bvec,
 	/* Frequency shift 1/4 rate up */
 	rotate(&rot_in, &rot_out, FREQ_SHFT_UP);
 
+	//DSP_q15tofl(rot_out.data, dbg, 16 * 2);
+
 	/* Pulse shaping */
 	rc = cxvec_convolve(&rot_out, h, out, CONV_NO_DELAY);
 	if (rc < 0) {
 		return -1;
 	}
 
-	//DSP_q15tofl((short *) out->data, (float *) dbg, 32 * 2);
+	//DSP_q15tofl((short *) out->data, (float *) dbg, 16 * 2);
+
+	return 0;
+}
+
+static int slice(struct cxvec *in, short *out)
+{
+	short i;
+
+	/* Hack */
+	for (i = 0; i < in->len; i++) {
+#if 1
+		if (in->data[i + 1].real > 0)
+			out[i] = 32000;
+		else
+			out[i] = 0;
+#else
+		if (in->data[i + 1].real > 0)
+			out[i] = ((2 * in->data[i + 1].real) >> 1) + 16380;
+		else
+			out[i] = (2 * in->data[i + 1].real + 32760) >> 1;
+#endif
+	}
+
+	return 0;
+}
+
+static int slice2(struct cxvec *in, short *out)
+{
+	short i;
+
+	for (i = 0; i < in->len; i++) {
+#if 1
+		if (in->data[i].real < 0)
+			out[i] = 32000;
+		else
+			out[i] = 0;
+#else
+		if (in->data[i].real < 0)
+			out[i] = (2 * in->data[i].real + 32760) >> 1;
+		else
+			out[i] = ((2 * in->data[i].real) >> 1) + 16380;
+#endif
+	}
 
 	return 0;
 }
 
 #if 1
-int gmsk_demod(struct cxvec *in, struct cxvec *h, struct cxvec *out)
+int gmsk_demod(struct cxvec *in, struct cxvec *h, struct rvec *out)
 {
-	int rc;
-
 	if (in->len > DEF_MAXLEN) {
 		return -1;
 	}
@@ -182,11 +225,31 @@ int gmsk_demod(struct cxvec *in, struct cxvec *h, struct cxvec *out)
 
 	rotate(in, &rot_out, FREQ_SHFT_UP);
 
-	DSP_q15tofl((short *) rot_out.data, (float *) dbg, 156 * sizeof(complex));
+	slice(&rot_out, out->data);
+	//DSP_q15tofl((short *) rot_out.data, (float *) dbg, 156 * 2);
 
 	return 0;
 }
 #endif
+
+int rach_demod(struct cxvec *in, struct cxvec *h, struct rvec *out)
+{
+	if (in->len > DEF_MAXLEN) {
+		return -1;
+	}
+
+	rot_in.len = out->len;
+	rot_out.len = out->len;
+
+	memset(rot_out.buf, 0, rot_out.buf_len * sizeof(complex));
+
+	rotate(in, &rot_out, FREQ_SHFT_UP);
+
+	slice(&rot_out, out->data);
+	//DSP_q15tofl((short *) rot_out.data, (float *) dbg, 156 * 2);
+
+	return 0;
+}
 
 void init_gmsk()
 {

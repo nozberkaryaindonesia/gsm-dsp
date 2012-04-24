@@ -32,8 +32,17 @@
 #define DEF_MAXLEN		256
 #define M_PIf			(3.14159265358979323846264338327f)
 
-float sinc(float x);
+enum scale_type {
+	SCALE_DC_GAIN,
+	SCALE_NO_SAT,
+	SCALE_POW
+};
 
+float sinc(float x);
+int flt_scale_h(float *h, int len, enum scale_type type);
+int cxvec_scale_h(struct cxvec *h, enum scale_type type);
+int cxvec_rot90(struct cxvec *h);
+ 
 void init_dsp();
 
 #endif /* _DSP_H_ */

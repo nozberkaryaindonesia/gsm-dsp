@@ -20,6 +20,7 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
+#include <stdlib.h>
 #include <math.h>
 #include "dsp.h"
 
@@ -31,6 +32,82 @@ float sinc(float x)
 		return .9999999;
 
 	return sin(M_PIf * x) / (M_PIf * x);
+}
+
+int flt_scale_h(float *h, int len, enum scale_type type)
+{
+	int i;
+	float sum = 0;
+
+	switch (type) {
+	case SCALE_DC_GAIN:
+		for (i = 0; i < len; i++)
+			sum += sqrt(h[2 * i + 0] * h[2 * i + 0] +
+				    h[2 * i + 0] * h[2 * i + 0]);
+		break;
+	case SCALE_NO_SAT:
+		for (i = 0; i < len; i++)
+			sum += abs(h[2 * i]);
+		break;
+	case SCALE_POW:
+		for (i = 0; i < len; i++) {
+			sum += h[2 * i + 0] * h[2 * i + 0];
+			sum += h[2 * i + 1] * h[2 * i + 1];
+		}
+		break;
+	default:
+		return -1;
+	}
+
+	if (type == SCALE_POW)
+		sum = sqrt(sum);
+
+	for (i = 0; i < len; i++) {
+		h[2 * i + 0] /= sum;
+		h[2 * i + 1] /= sum;
+	}
+
+	return 0;
+}
+
+int cxvec_scale_h(struct cxvec *h, enum scale_type type)
+{
+	int rc, i;
+	float *flt_h = (float *) malloc(h->len * 2 * sizeof(float));
+
+	DSP_q15tofl(h->data, flt_h, h->len * 2);
+
+	rc = flt_scale_h(flt_h, h->len, type);
+	if (rc < 0) {
+		free(flt_h);
+		return -1;
+	}
+
+	DSP_fltoq15(flt_h, h->data, h->len * 2);
+
+	free(flt_h);
+	return 0;
+}
+
+/* Hack */
+int cxvec_rot90(struct cxvec *h)
+{
+	int rc, i;
+	float *flt_in = (float *) malloc(h->len * 2 * sizeof(float));
+	float *flt_out = (float *) malloc(h->len * 2 * sizeof(float));
+
+	DSP_q15tofl(h->data, flt_in, h->len * 2);
+
+	for (i = 0; i < h->len; i++) {
+		flt_out[2 * i + 0] = -flt_in[2 * i + 1];
+		flt_out[2 * i + 1] = flt_in[2 * i + 0];
+	}
+
+	DSP_fltoq15(flt_out, h->data, h->len * 2);
+
+	free(flt_in);
+	free(flt_out);
+	return 0;
 }
 
 void init_dsp()

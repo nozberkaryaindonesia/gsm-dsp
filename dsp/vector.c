@@ -111,8 +111,8 @@ int norm2(complex val)
 {
 	int sum;
 
-	sum = val.real * val.real;
-	sum += val.imag * val.imag;
+	sum = (int) val.real * (int) val.real;
+	sum += (int) val.imag * (int) val.imag;
 
-	return sum;
+	return (sum >> 15);
 }

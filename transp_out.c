@@ -43,8 +43,8 @@ void init_output_thrd()
 
 void output_thrd()
 {
-	struct cmsg *msg, *msg_gpp, *msg_proc;
-	int status, msg_id;
+	struct link_msg *msg, *msg_gpp, *msg_proc;
+	int i, status, msg_id;
 	MSGQ_Queue msgq_proc_dsp;
 	MSGQ_Queue msgq_gpp_in;
 	MSGQ_LocateAttrs sync_locate_attrs;
@@ -68,18 +68,19 @@ void output_thrd()
 		}
 	}
 
-	status = MSGQ_alloc(0, (MSGQ_Msg *) &msg, APPMSGSIZE);
-	if (status != SYS_OK) {
-		SYS_abort("Failed to allocate a message");
-	}
+	for (i = 0; i < 1; i++) {
+		status = MSGQ_alloc(0, (MSGQ_Msg *) &msg, APPMSGSIZE);
+		if (status != SYS_OK) {
+			SYS_abort("Failed to allocate a message");
+		}
 
-	MSGQ_setMsgId((MSGQ_Msg) msg, DSP_OUTPUTMSGID);
+		MSGQ_setMsgId((MSGQ_Msg) msg, DSP_OUTPUTMSGID);
+		msg->data = NULL;
 
-	msg->data = NULL;
-
-	status = MSGQ_put(msgq_proc_dsp, (MSGQ_Msg) msg);
-	if (status != SYS_OK) {
-		SYS_abort("Failed to send a message");
+		status = MSGQ_put(msgq_proc_dsp, (MSGQ_Msg) msg);
+		if (status != SYS_OK) {
+			SYS_abort("Failed to send a message");
+		}
 	}
 
 	msg_proc = NULL;
@@ -93,7 +94,7 @@ void output_thrd()
 
 		msg_id = MSGQ_getMsgId((MSGQ_Msg)msg);
 		switch (msg_id) {
-		case GPP_OUTPUTMSGID:
+		case GPP_INPUTMSGID:
 			msg_gpp = msg;
 			break;
 		case DSP_PROCESSMSGID:

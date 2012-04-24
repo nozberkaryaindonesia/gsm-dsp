@@ -54,14 +54,14 @@ static struct cxvec corr_out;
 /*
  * Delay compensated RACH burst
  */
-complex delay_data[DEF_MAXLEN];
-struct cxvec rach_delay;
+static complex delay_data[DEF_MAXLEN];
+static struct cxvec delay_brst;
 
 /*
  * Bit output
  */
-complex demod_data[DEF_MAXLEN];
-struct cxvec demod_vec;
+short demod_data[DEF_MAXLEN];
+struct rvec demod_vec;
 
 int init_rach_seq(struct cxvec *pls)
 {
@@ -78,11 +78,18 @@ int init_rach_seq(struct cxvec *pls)
 	if (rc < 0)
 		return -1;
 
-	cxvec_rvrs(&rach_mod_seq);
+	cxvec_scale_h(&rach_mod_seq, SCALE_DC_GAIN);
 
+	cxvec_rvrs(&rach_mod_seq);
         rach_mod_seq.flags |= CXVEC_FLG_REVERSE;
 
 	return 0;
+}
+
+static void reset()
+{
+	cxvec_init(&delay_brst, DEF_MAXLEN-64, DEF_MAXLEN, 32, delay_data);
+	memset(delay_brst.buf, 0, delay_brst.buf_len * sizeof(complex));
 }
 
 int detect_rach(struct cxvec *in)
@@ -103,33 +110,46 @@ int detect_rach(struct cxvec *in)
 	if (rc < 0)
 		return -1;
 
-#if 0
-	DSP_q15tofl((short *) corr_out.data, (float *) dbg, 157 * 2);
-	return 0;
-#else
+	//DSP_q15tofl((short *) corr_out.data, (float *) dbg, 157 * 2);
+	//return 0;
+
 	rc = cxvec_peak_detect(&corr_out, &peak);
 	if (rc < 0)
 		return -1;
-#endif
-	rach_delay.len = in->len;
-	cxvec_advance(in, &rach_delay, 0, 18);
-
-	demod_vec.len = 156;
-	gmsk_demod(&rach_delay, NULL, &demod_vec);
-
-	//DSP_q15tofl((short *) rach_delay.data, (float *) dbg, 156 * 2);
-	//DSP_q15tofl((short *) rach_mod_seq.data, ((float *) dbg) + 156 * 2, 44 * 2); 
 
 	//memcpy(dbg, &peak, sizeof(peak));
+	//return 0;
 
-	return 0;
+	//if ((peak.whole < 28) || (peak.whole > 30))
+	//	return -1;
+
+	if ((peak.whole < 25) || (peak.whole > 32))
+		return -1;
+
+	delay_brst.len = in->len;
+	//cxvec_advance(in, &delay_brst, peak.whole - 29, peak.frac);
+	cxvec_advance(in, &delay_brst, peak.whole - 29, peak.frac);
+
+	demod_vec.len = 156;
+	rach_demod(&delay_brst, NULL, &demod_vec);
+	//gmsk_demod(in, NULL, &demod_vec);
+	//return 0;
+
+	DSP_q15tofl(demod_vec.data, ((float *) dbg) + 44, 156);
+
+	//DSP_q15tofl((short *) delay_brst.data, (float *) dbg, 156 * 2);
+	//DSP_q15tofl((short *) rach_mod_seq.data, ((float *) dbg) + 156 * 2, 44 * 2); 
+
+	reset();
+
+	return (peak.whole - 32) * 256 + (peak.frac * 8);
 }
 
 void init_rach(struct cxvec *pls)
 {
 	init_rach_seq(pls);
 	cxvec_init(&corr_out, DEF_MAXLEN, DEF_MAXLEN, 0, corr_out_data);
-	cxvec_init(&rach_delay, DEF_MAXLEN, DEF_MAXLEN, 0, delay_data);
+	cxvec_init(&delay_brst, DEF_MAXLEN-64, DEF_MAXLEN, 32, delay_data);
 
 	demod_vec.data = demod_data;
 	//DSP_q15tofl(rach_mod_seq.data, (float *) dbg, RACH_SYNC_LEN * 2);

@@ -55,7 +55,7 @@ static int init_delay_filt()
 	short *prot_filt_i;
 
 	/* FIXME: we need 2 sample offset (4 with no delay convole) why? */
-	float midpt = prot_filt_len / 2 - 2 * m; 
+	float midpt = prot_filt_len / 2 + 2 * m; 
 
 	prot_filt_f = (float *) malloc(prot_filt_len * 2 * sizeof(float));
 	prot_filt_i = (short *) malloc(prot_filt_len * 2 * sizeof(short));
@@ -69,6 +69,8 @@ static int init_delay_filt()
 		prot_filt_f[2*i + 0] = sinc(((float) i - midpt) / m);
 		prot_filt_f[2*i + 1] = 0;
 	}
+
+	//flt_scale_h(prot_filt_f, prot_filt_len, SCALE_DC_GAIN);
 
 	DSP_fltoq15(prot_filt_f, prot_filt_i, 2 * prot_filt_len);
 #if 0
@@ -96,13 +98,15 @@ static int init_delay_filt()
 
 int cxvec_advance(struct cxvec *in, struct cxvec *out, int whole, int frac)
 {
-	int delay;
-
+#if 0
 	if ((frac > DELAY_FILT_M) || (cxvec_tailrm(out) < whole)) {
 		return -1;
 	}
-
+#endif
 	cxvec_convolve(in, &delay_filt[frac], out, CONV_NO_DELAY);
+
+	/* Hack! */
+	//whole -= 5;
 
 	out->start_idx += whole;
 	out->data = &out->buf[out->start_idx];

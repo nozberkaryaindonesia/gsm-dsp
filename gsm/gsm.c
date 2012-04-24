@@ -26,14 +26,43 @@
 #include <math.h>
 
 #include "../msg.h"
+#include "../gsm_hdr.h"
 #include "../dsp/dsp.h"
 #include "rach.h"
+#include "normal.h"
 
 #define GSM_PLS_LEN             4
 
 char *dbg;
 
 static int start = 0;
+
+enum brst_type {
+	RACH,
+	TSC
+};
+
+enum brst_type get_corr_type(struct gsm_hdr *hdr)
+{
+	int tn = hdr->time.tn;
+	int fn = hdr->time.fn;
+	int mod51;
+
+	if (tn == 0) {
+		mod51 = fn % 51;
+
+		if ((mod51 <= 36) && (mod51 >= 14))
+			return RACH;
+		else if ((mod51 == 4) || (mod51 == 5))
+			return RACH;
+		else if ((mod51 == 45) || (mod51 == 46))
+			return RACH;
+		else
+			return TSC;
+	} else {
+		return TSC;
+	}
+}
 
 /*
  * GSM Pulse filter
@@ -63,7 +92,9 @@ static void init_gsm_pls()
 	f_pls[7] = 0.0f;
 
 	vnorm = flt_norm2(f_pls, 2 * GSM_PLS_LEN);
-	div = vnorm; /* div by sps if we supported */
+
+	/* Divide by samples-per-symbol if we supported it */
+	div = vnorm;
 	avg = sqrt(div);
 
 	for (i = 0; i < (2 * GSM_PLS_LEN); i++) {
@@ -85,27 +116,31 @@ static void init_gsm()
 	return;
 }
 
-static void test_rach(char *in, char *out)
+static int test_rach(void *in, char *out)
 {
 	struct cxvec in_vec;
 
 	cxvec_init(&in_vec, 156, DEF_MAXLEN, 44, (complex *) in);
 
-	detect_rach(&in_vec);
+	return detect_rach(&in_vec);
 }
 
-static void test_tsc(char *in, char *out)
+static int test_tsc(void *in, char *out)
 {
 	struct cxvec in_vec;
 
 	cxvec_init(&in_vec, 156, DEF_MAXLEN, 44, (complex *) in);
 
-	detect_tsc(&in_vec);
+	return detect_tsc(&in_vec);
 }
 
 /* Main entry point */
 int handle_msg(char *in, int in_len, char *out, int out_len)
 {
+	int rc, good;
+	struct gsm_hdr hdr_in;
+	struct gsm_hdr *hdr_out;
+	enum brst_type type;
 	dbg = out;
 
 	if (start == 0) {
@@ -113,10 +148,41 @@ int handle_msg(char *in, int in_len, char *out, int out_len)
 		start = 1;
 	}
 
-	//test_rach(in, out);
-	test_tsc(in, out);
+	memcpy(&hdr_in, in, sizeof(struct gsm_hdr));
+	type = get_corr_type(&hdr_in);
 
-	//DSP_q15tofl(in, (float *) dbg, 156 * 2);
+	good = 1;
+
+	switch (type) {
+	case RACH:
+		rc = test_rach(in, out);
+		if (rc < 0)
+			good = 0;
+		break;
+	case TSC:
+		rc = test_tsc(in, out);
+		if (rc < 0)
+			good = 0;
+		break;
+	default:
+		memset(out, 0, sizeof(struct gsm_hdr));
+		return -1;
+	}
+
+	hdr_out = (struct gsm_hdr *) out;
+	if (good) {
+		hdr_out->time.tn = hdr_in.time.tn;
+		hdr_out->time.fn = hdr_in.time.fn;
+		hdr_out->data_offset = hdr_in.data_offset;
+		hdr_out->data_len = 156;
+		hdr_out->toa = rc; 
+	} else {
+		hdr_out->time.tn = 0; 
+		hdr_out->time.fn = 0;
+		hdr_out->data_offset = 0; 
+		hdr_out->data_len = 0; 
+		hdr_out->toa = 0; 
+	}
 
 	return 0;
 }

@@ -46,7 +46,7 @@ void write_test(float *buf, int len, int val)
 
 void proc_thrd()
 {	
-	struct cmsg *msg, *msg_dsp_in, *msg_dsp_out;
+	struct link_msg *msg, *msg_dsp_in, *msg_dsp_out;
 	int status;
 	MSGQ_Queue msgq_dsp_out;
 	MSGQ_Queue msgq_dsp_in;
@@ -69,6 +69,7 @@ void proc_thrd()
 	}
 
 	MSGQ_setMsgId( (MSGQ_Msg) msg_dsp_in, DSP_PROCESSMSGID);
+	msg_dsp_in->data = NULL;
 	
 	status = MSGQ_put(msgq_dsp_in, (MSGQ_Msg) msg_dsp_in);
 	if (status != SYS_OK) {

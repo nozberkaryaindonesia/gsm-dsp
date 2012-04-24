@@ -26,7 +26,7 @@
 
 extern char *dbg;
 
-#define USE_TSC			0
+#define USE_TSC			2
 #define NUM_TSC			8
 #define TSC_LEN			26
 
@@ -34,14 +34,14 @@ extern char *dbg;
  * Training sequences and midambles
  */
 int tsc_seqs[NUM_TSC][TSC_LEN] = {
-        { 0,0,1,0,0,1,0,1,1,1,0,0,0,0,1,0,0,0,1,0,0,1,0,1,1,1 },
-        { 0,0,1,0,1,1,0,1,1,1,0,1,1,1,1,0,0,0,1,0,1,1,0,1,1,1 },
-        { 0,1,0,0,0,0,1,1,1,0,1,1,1,0,1,0,0,1,0,0,0,0,1,1,1,0 },
-        { 0,1,0,0,0,1,1,1,1,0,1,1,0,1,0,0,0,1,0,0,0,1,1,1,1,0 },
-        { 0,0,0,1,1,0,1,0,1,1,1,0,0,1,0,0,0,0,0,1,1,0,1,0,1,1 },
-        { 0,1,0,0,1,1,1,0,1,0,1,1,0,0,0,0,0,1,0,0,1,1,1,0,1,0 },
-        { 1,0,1,0,0,1,1,1,1,1,0,1,1,0,0,0,1,0,1,0,0,1,1,1,1,1 },
-        { 1,1,1,0,1,1,1,1,0,0,0,1,0,0,1,0,1,1,1,0,1,1,1,1,0,0 },
+        { 0,0,1,0,0, 1,0,1,1,1,0,0,0,0,1,0,0,0,1,0,0, 1,0,1,1,1 },
+        { 0,0,1,0,1, 1,0,1,1,1,0,1,1,1,1,0,0,0,1,0,1, 1,0,1,1,1 },
+        { 0,1,0,0,0, 0,1,1,1,0,1,1,1,0,1,0,0,1,0,0,0, 0,1,1,1,0 },
+        { 0,1,0,0,0, 1,1,1,1,0,1,1,0,1,0,0,0,1,0,0,0, 1,1,1,1,0 },
+        { 0,0,0,1,1, 0,1,0,1,1,1,0,0,1,0,0,0,0,0,1,1, 0,1,0,1,1 },
+        { 0,1,0,0,1, 1,1,0,1,0,1,1,0,0,0,0,0,1,0,0,1, 1,1,0,1,0 },
+        { 1,0,1,0,0, 1,1,1,1,1,0,1,1,0,0,0,1,0,1,0,0, 1,1,1,1,1 },
+        { 1,1,1,0,1, 1,1,1,0,0,0,1,0,0,1,0,1,1,1,0,1, 1,1,1,0,0 },
 };
 
 complex tsc_cvec_data[NUM_TSC][DEF_MAXLEN];
@@ -49,7 +49,7 @@ struct cxvec tsc_cvecs[NUM_TSC];
 
 #define MIDAMBL_STRT		5
 #define MIDAMBL_LEN             16
-complex midambl_cvec_data[NUM_TSC][DEF_MAXLEN];
+complex midambl_cvec_data[NUM_TSC][MIDAMBL_LEN];
 struct cxvec midambl_cvecs[NUM_TSC];
 struct vec_peak midambl_peaks[NUM_TSC];
 
@@ -68,15 +68,15 @@ static struct cxvec delay_brst;
 /*
  * Bit output
  */
-static complex demod_data[DEF_MAXLEN];
-static struct cxvec demod_vec;
+static short demod_data[DEF_MAXLEN];
+static struct rvec demod_vec;
 
 static int init_tsc(struct cxvec *pls)
 {
 	int i, rc;
 	struct bitvec tsc_bvec;
 	struct cxvec auto_corr;
-
+#if 0
 	/* Modulated training sequences */
 	for (i = 0; i < NUM_TSC; i++) {
 		tsc_bvec.len = TSC_LEN;
@@ -92,21 +92,23 @@ static int init_tsc(struct cxvec *pls)
 		if (rc < 0)
 			return -1;
 	}
-
+#endif
 	/* Modulated training sequences midambles */
+
 	for (i = 0; i < NUM_TSC; i++) {
 		tsc_bvec.len = MIDAMBL_LEN;
 		tsc_bvec.data = &tsc_seqs[i][MIDAMBL_STRT];
 
-		cxvec_init(&midambl_cvecs[i], tsc_bvec.len,
-			   DEF_MAXLEN, 0, &midambl_cvec_data[i][0]);
+		cxvec_init(&midambl_cvecs[i], MIDAMBL_LEN,
+			   MIDAMBL_LEN, 0, &midambl_cvec_data[i][0]);
 
-		memset(midambl_cvecs[i].buf, 0, midambl_cvecs[i].buf_len * sizeof(complex));
-
-		/* FIXME Guard interval? */
 		rc = gmsk_mod(&tsc_bvec, pls, &midambl_cvecs[i]);
 		if (rc < 0)
 			return -1;
+
+		//cxvec_rot90(&midambl_cvecs[i]);
+
+		cxvec_scale_h(&midambl_cvecs[i], SCALE_DC_GAIN);
 
 		cxvec_rvrs(&midambl_cvecs[i]);
 		midambl_cvecs[i].flags |= CXVEC_FLG_REVERSE;
@@ -130,6 +132,12 @@ static int init_tsc(struct cxvec *pls)
 	return 0;
 }
 
+static void reset_norm()
+{
+	cxvec_init(&delay_brst, DEF_MAXLEN-64, DEF_MAXLEN, 32, delay_data);
+	memset(delay_brst.buf, 0, delay_brst.buf_len * sizeof(complex));
+}
+
 int detect_tsc(struct cxvec *in)
 {
 	int rc;
@@ -146,31 +154,47 @@ int detect_tsc(struct cxvec *in)
 
 	rc = cxvec_correlate(in, &midambl_cvecs[USE_TSC], &corr_out, CONV_NO_DELAY);
 	if (rc < 0)
-		return -1;
+		return 0;
 
-	DSP_q15tofl(corr_out.data, dbg, 156 * 2);
-	return 0;
+	//DSP_q15tofl(corr_out.data, dbg, 156 * 2);
+	//return 0;
 
 	rc = cxvec_peak_detect(&corr_out, &peak);
 	if (rc < 0)
 		return -1;
 
+	/* Bound peak */
+	//if ((peak.whole < 72) || (peak.whole > 74))
+	//	return -1;
+
+	if ((peak.whole < 65) || (peak.whole > 80))
+		return -1;
+
+	//memcpy(dbg, &peak, sizeof(struct vec_peak));
+	//return 0;
+
 	delay_brst.len = in->len;
-	cxvec_advance(in, &delay_brst, 0, peak.frac);
+	cxvec_advance(in, &delay_brst, peak.whole - 74, peak.frac);
+	//cxvec_advance(in, &delay_brst, 0, peak.frac);
+
+	//DSP_q15tofl(in->data, dbg, 156 * 2);
+	//DSP_q15tofl(delay_brst.data, dbg, 156 * 2);
+	//return 0;
 
 	demod_vec.len = 156;
 	gmsk_demod(&delay_brst, NULL, &demod_vec);
+	//gmsk_demod(in, NULL, &demod_vec);
 
-	//memcpy(dbg, &peak, sizeof(peak));
+	DSP_q15tofl(demod_vec.data, ((float *) dbg) + 44, 156);
 
-	return 0;
+	reset_norm();
+	return (peak.whole - 75) * 256 + (peak.frac * 8);
 }
 
 void init_norm(struct cxvec *pls)
 {
 	init_tsc(pls);
 	cxvec_init(&corr_out, DEF_MAXLEN, DEF_MAXLEN, 0, corr_out_data);
-	cxvec_init(&delay_brst, DEF_MAXLEN, DEF_MAXLEN, 0, delay_data);
-
-	demod_vec.data = demod_data;
+	cxvec_init(&delay_brst, DEF_MAXLEN-64, DEF_MAXLEN, 32, delay_data);
+	rvec_init(&demod_vec, DEF_MAXLEN-64, DEF_MAXLEN, 32, demod_data);
 }

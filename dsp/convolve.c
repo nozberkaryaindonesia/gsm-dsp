@@ -70,8 +70,8 @@ int cxvec_convolve(struct cxvec *restrict in,
 {
 	int rc;
 
-	if ((in->len % 4) || (h->len % 2) || (out->len != in->len))
-		return -1;
+//	if ((in->len % 4) || (h->len % 2) || (out->len != in->len))
+//		return -1;
 
 	switch (type) {
 	case CONV_NO_DELAY:
