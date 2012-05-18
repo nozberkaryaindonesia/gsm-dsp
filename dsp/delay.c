@@ -25,7 +25,7 @@
 #include "dsp.h"
 
 #define DELAY_FILT_M                    32
-#define DELAY_FILT_WIDTH                16
+#define DELAY_FILT_WIDTH                8
 #define DELAY_FILT_MIN                  4
 
 /* 
@@ -54,11 +54,10 @@ static int init_delay_filt()
 	float *prot_filt_f;
 	short *prot_filt_i;
 
-	/* FIXME: we need 2 sample offset (4 with no delay convole) why? */
-	float midpt = prot_filt_len / 2 + 2 * m; 
+	float midpt = prot_filt_len / 2 - m; 
 
-	prot_filt_f = (float *) malloc(prot_filt_len * 2 * sizeof(float));
-	prot_filt_i = (short *) malloc(prot_filt_len * 2 * sizeof(short));
+	prot_filt_f = (float *) malloc(prot_filt_len * sizeof(float));
+	prot_filt_i = (short *) malloc(prot_filt_len * sizeof(short));
 
 	for (i = 0; i < m; i++) {
 		cxvec_init(&delay_filt[i], DELAY_FILT_WIDTH,
@@ -66,18 +65,17 @@ static int init_delay_filt()
 
 	}
 	for (i = 0; i < prot_filt_len; i++) {
-		prot_filt_f[2*i + 0] = sinc(((float) i - midpt) / m);
-		prot_filt_f[2*i + 1] = 0;
+		prot_filt_f[i] = sinc(((float) i - midpt) / m);
 	}
 
 	//flt_scale_h(prot_filt_f, prot_filt_len, SCALE_DC_GAIN);
 
-	DSP_fltoq15(prot_filt_f, prot_filt_i, 2 * prot_filt_len);
+	DSP_fltoq15(prot_filt_f, prot_filt_i, prot_filt_len);
 #if 0
 	/* Reverse loading */
 	for (i = 0; i < DELAY_FILT_WIDTH; i++) {
 		for (n = 0; n < m; n++) {
-			delay_filt[m-1-n].data[i].real = prot_filt_i[2 * i * m + 2 * n];
+			delay_filt[m-1-n].data[i].real = prot_filt_i[i * m + n];
 			delay_filt[m-1-n].data[i].imag = 0; 
 		}
 	}
@@ -85,7 +83,7 @@ static int init_delay_filt()
 	/* Normal loading */
 	for (i = 0; i < DELAY_FILT_WIDTH; i++) {
 		for (n = 0; n < m; n++) {
-			delay_filt[n].data[i].real = prot_filt_i[2 * i * m + 2 * n];
+			delay_filt[n].data[i].real = prot_filt_i[i * m + n];
 			delay_filt[n].data[i].imag = 0; 
 		}
 	}
@@ -98,15 +96,13 @@ static int init_delay_filt()
 
 int cxvec_advance(struct cxvec *in, struct cxvec *out, int whole, int frac)
 {
-#if 0
+#if 0 
 	if ((frac > DELAY_FILT_M) || (cxvec_tailrm(out) < whole)) {
 		return -1;
 	}
 #endif
-	cxvec_convolve(in, &delay_filt[frac], out, CONV_NO_DELAY);
-
-	/* Hack! */
-	//whole -= 5;
+//	if (frac > 0)
+		cxvec_convolve(in, &delay_filt[frac], out, CONV_NO_DELAY);
 
 	out->start_idx += whole;
 	out->data = &out->buf[out->start_idx];

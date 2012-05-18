@@ -111,6 +111,40 @@ float flt_norm2(float *data, int len)
         return sum;
 }
 
+int cxvec_scale(struct cxvec *in_vec, struct cxvec *out_vec, complex val, int shft)
+{
+#if 0
+	int i;
+
+	/* Packed casts */
+	unsigned *restrict _in = (unsigned *) in->data;
+	unsigned *restrict _out = (unsigned *) out->data;
+	unsigned *restrict _val = (unsigned *) &val;
+	for (i = 0; i < in->len; i++) {
+		_out[i] = _cmpyr1(_in[i], *_val);
+	}
+
+	return in->len;
+#else
+	int i;
+	int sum_a, sum_b;
+	complex *in = in_vec->data;
+	complex *out = out_vec->data;
+
+	for (i = 0; i < in_vec->len; i++) {
+		sum_a = (((int) in[i].real) << shft) * (int) val.real;
+		sum_b = (((int) in[i].imag) << shft) * (int) val.imag;
+		out[i].real = ((sum_a - sum_b) >> 15);
+
+		sum_a = (((int) in[i].real) << shft) * (int) val.imag;
+		sum_b = (((int) in[i].imag) << shft) * (int) val.real;
+		out[i].imag = ((sum_a + sum_b) >> 15);
+	}
+
+	return 0;
+#endif
+}
+
 /*
  * Input must be multiple of 4 and >= 8
  */
@@ -124,43 +158,6 @@ int cxvec_norm2(struct cxvec *vec)
 	sum = DSP_vecsumsq((short *) vec->data, 2 * vec->len);
 
 	return sum;
-}
-
-/*
- * Check for 'restrict' validity
- */
-int cxvec_pow(struct cxvec *in_vec, struct rvec *out_vec)
-{
-	int i;
-	complex *in = in_vec->data;
-	short *out = out_vec->data;
-
-#ifdef INTRN_DOTP2
-	int val_r, val_i;
-
-	for (i = 0; i < in_vec->len; i++) {
-		out[i] = (_dotp2((int) in[i], (int) in[i]) >> 15);
-	}
-#else
-#ifdef INTRN_SADD
-	int sum_r, sum_i;
-
-	for (i = 0; i < in_vec->len; i++) {
-		sum_r = ((int) in[i].real) * ((int) in[i].real);
-		sum_i = ((int) in[i].imag) * ((int) in[i].imag);
-		out[i] = (_sadd(sum_r, sum_i) >> 15);
-	}
-#else
-	int sum_r, sum_i;
-
-	for (i = 0; i < in_vec->len; i++) {
-		sum_r = ((int) in[i].real) * ((int) in[i].real);
-		sum_i = ((int) in[i].imag) * ((int) in[i].imag);
-		out[i] = ((sum_r + sum_i) >> 15);
-	}
-#endif
-#endif
-	return 0;
 }
 
 /* No length restrictions */
@@ -177,28 +174,12 @@ int maxval(short *in, int len)
 	return max;
 }
 
-/* No length restrictions */
-int maxidx(short *in, int len)
-{
-	int i, idx;
-	int max = 0;
-
-	for (i = 0; i < len; i++) {
-		if (in[i] > max) {
-			max = in[i];
-			idx = i;
-		}
-	}
-
-	return idx;
-}
-
 int norm2(complex val)
 {
 	int sum;
 
-	sum = val.real * val.real;
-	sum += val.imag * val.imag;
+	sum = (int) val.real * (int) val.real;
+	sum += (int) val.imag * (int) val.imag;
 
-	return sum;
+	return (sum >> 15);
 }

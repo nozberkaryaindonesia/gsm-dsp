@@ -53,3 +53,22 @@ int peak_detect16(struct cxvec *restrict in, struct vec_peak *restrict peak)
 }
 
 
+
+/* Consider the case of vector roll off and zero values are included */
+/* Single sided width ignoring the adjacent two samples */
+/* Total must be a factor of 2 */
+/* Single sided width must be '4' */
+int peak_to_mean(struct cxvec * vec, int peak, int idx, int width)
+{
+	int i;
+	int sum = 0;
+
+	for (i = 2; i <= (width + 1); i++) {
+		sum += norm2(vec->data[idx - i]);
+		sum += norm2(vec->data[idx + i]);
+	}
+
+	/* For 8 samples */
+	/* Not square rooting this value so we need to make power comparisons */
+	return ((peak >> 2) > (sum >> 3));
+}

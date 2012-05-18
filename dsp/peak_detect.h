@@ -26,14 +26,13 @@
 #include "sigvec.h"
 
 struct vec_peak {
-        int orig;
-        int whole;
-        int frac;
-        int gain;
+	int orig;
+	int whole;
+	int frac;
+	complex gain;
 };
 
 void init_peak_detect();
 int cxvec_peak_detect(struct cxvec *restrict in, struct vec_peak *restrict peak);
-int peak_to_mean(struct cxvec * vec, int peak, int idx, int width);
 
-#endif /* _PEAK_DETECT_H */
+#endif /* _PEAK_DETECT_H_ */

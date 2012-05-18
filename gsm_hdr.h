@@ -25,6 +25,7 @@
 
 typedef unsigned short uint16_t;
 typedef unsigned int uint32_t;
+typedef short int16_t;
 
 struct gsm_hdr {
 	struct {
@@ -35,6 +36,16 @@ struct gsm_hdr {
 	uint16_t data_len;
 	uint16_t toa;
 	uint16_t rssi;
+
+	int16_t x0;
+	int16_t x1;
+	int16_t x2;
+	int16_t x3;
+	int16_t x4;
+	int16_t x5;
+	int16_t x6;
+	int16_t x7;
+	int16_t x8;
 };
 
 #endif /* _BTS_HDR_H_ */

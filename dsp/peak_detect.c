@@ -26,7 +26,7 @@
 extern char *dbg;
 
 #define INTERP_FILT_M			32
-#define INTERP_FILT_WIDTH		16 
+#define INTERP_FILT_WIDTH		8
 #define INTERP_FILT_RATE		(INTERP_FILT_M * GSMRATE)
 #define INTERP_FILT_MIN			4
 
@@ -34,13 +34,12 @@ extern char *dbg;
  * Interpolating filterbank
  * Real input with multiple of multiple of 8 taps
  */
-short interp_filt_data[INTERP_FILT_M][INTERP_FILT_WIDTH];
-struct rvec interp_filt[INTERP_FILT_M];
+complex interp_filt_data[INTERP_FILT_M][INTERP_FILT_WIDTH];
+struct cxvec interp_filt[INTERP_FILT_M];
 
-static short early[INTERP_FILT_M];
-static short late[INTERP_FILT_M];
-static short power_buf[DEF_MAXLEN];
-struct rvec pow_vec;
+static complex early[INTERP_FILT_M];
+static complex late[INTERP_FILT_M];
+static int pow[DEF_MAXLEN];
 
 /*
  * Create real floating point prototype filter and convert to Q15
@@ -48,10 +47,6 @@ struct rvec pow_vec;
  * Load partition filters in order so that increasing path number
  * interpolates results in a forward manner. Swap tap order due
  * to requires of DSPLIB real convolution.
- * 
- * Taps must be a factor of 4 or 8 depending on convolution used.
- *
- * Input must be a factor or 4.
  */
 static int init_interp_filt()
 {
@@ -61,14 +56,14 @@ static int init_interp_filt()
 	float *prot_filt_f;
 	short *prot_filt_i;
 
-	float midpt = prot_filt_len / 2 - m; 
+	float midpt = prot_filt_len / 2 - 1; 
 
 	prot_filt_f = (float *) malloc(prot_filt_len * sizeof(float));
 	prot_filt_i = (short *) malloc(prot_filt_len * sizeof(short));
 
 	for (i = 0; i < m; i++) {
-		rvec_init(&interp_filt[i], INTERP_FILT_WIDTH,
-			  INTERP_FILT_WIDTH, 0, &interp_filt_data[i][0]);
+		cxvec_init(&interp_filt[i], INTERP_FILT_WIDTH,
+			   INTERP_FILT_WIDTH, 0, &interp_filt_data[i][0]);
 	}
 
 	for (i = 0; i < prot_filt_len; i++) {
@@ -81,12 +76,9 @@ static int init_interp_filt()
 
 	for (i = 0; i < INTERP_FILT_WIDTH; i++) {
 		for (n = 0; n < m; n++) {
-			interp_filt[n].data[i] = prot_filt_i[i * m + n];
+			interp_filt[n].data[i].real = prot_filt_i[i * m + n];
+			interp_filt[n].data[i].imag = 0;
 		}
-	}
-
-	for (i = 0; i < m; i++) {
-		rvec_rvrs(&interp_filt[i]);
 	}
 
 	free(prot_filt_f);
@@ -95,93 +87,127 @@ static int init_interp_filt()
 	return 0;
 }
 
+static int maxidx(int *in, int len)
+{
+	int i;
+	int idx = -1;
+	int max = -1;
+
+	for (i = 0; i < len; i++) {
+		if (in[i] > max) {
+			max = in[i];
+			idx = i;
+		}
+	}
+
+	return idx;
+}
+
+static int cx_maxidx(complex *in, int len)
+{
+	int i;
+
+#ifdef INTRN_DOTP2
+	for (i = 0; i < len; i++) {
+		pow[i] = _dotp2((int) in[i], (int) in[i]);
+	}
+#else
+#ifdef INTRN_SADD
+	int sum_r, sum_i;
+
+	for (i = 0; i < len; i++) {
+		sum_r = ((int) in[i].real) * ((int) in[i].real);
+		sum_i = ((int) in[i].imag) * ((int) in[i].imag);
+		pow[i] = _sadd(sum_r, sum_i);
+	}
+#else
+	int sum_r, sum_i;
+
+	for (i = 0; i < len; i++) {
+		sum_r = ((int) in[i].real) * ((int) in[i].real);
+		sum_i = ((int) in[i].imag) * ((int) in[i].imag);
+		pow[i] = sum_r + sum_i;
+	}
+#endif
+#endif
+	return maxidx(pow, len);
+}
+
 /*
  * Determine the case where the correlation point is at the very
  * end and a minimally padded vector will still roll off the end
  * before it gets to the center tap.
  */
-static int interp_pts(struct rvec *in, short idx,
-		      int frac, short *early, short *late)
+static int interp_pts(struct cxvec *in, int idx, int frac, complex *early, complex *late)
 {
-	short conv_out[2];
+	int rc;
 
-	real_convolve2(&in->data[idx], &interp_filt[frac],
-		       conv_out, CONV_NO_DELAY);
+	complex conv_out[2];
+
+	rc = cx_conv2(&in->data[idx], &interp_filt[frac], conv_out, CONV_NO_DELAY);
 
 	*early = conv_out[0];
 	*late = conv_out[1];
 
-	return 0;
+	return rc;
 }
 
-int cxvec_peak_detect(struct cxvec *restrict in, struct vec_peak *restrict peak)
+int cxvec_peak_detect(struct cxvec *in, struct vec_peak *peak)
 {
-	int i;
-	int m = INTERP_FILT_M;
-	short early_pow, late_pow;
+	int i, rc;
+	int idx, early_idx, late_idx;
+	int max, early_max, late_max;
 
 	/* Find the power */
-	cxvec_pow(in, &pow_vec);
-	peak->gain = maxval(pow_vec.data, in->len);
-	peak->orig = maxidx(pow_vec.data, in->len);
+	idx = cx_maxidx(in->data, in->len);
+	max = norm2(in->data[idx]);
+
+	peak->orig = idx;
+
+	if ((idx < 20) || (idx > 85)) 
+		return -1;
 
 	/* Drop back one sample so we do early / late  in the same pass */
-	for (i = 0; i < m; i++) {
-		interp_pts(&pow_vec, peak->orig - 1, i, &early[i], &late[i]);
-	}                                                                                                    
-	//DSP_q15tofl(early, dbg, INTERP_FILT_M);
-	//return 0;
+	for (i = 0; i < INTERP_FILT_M; i++) {
+		//rc = interp_pts(in, idx, i, &early[i], &late[i]);
+		rc = interp_pts(in, idx, i, &early[i], &late[i]);
+	}
 
-	early_pow = maxval(early, INTERP_FILT_M);
-	late_pow = maxval(late, INTERP_FILT_M);
+	early_idx = cx_maxidx(early, INTERP_FILT_M);
+	early_max = norm2(early[early_idx]);
+
+	late_idx = cx_maxidx(late, INTERP_FILT_M);
+	late_max = norm2(late[late_idx]);
 
 	/*
 	 * Late sample bank includes the centre sample
 	 * Keep them discrete for now to avoid confusion
 	 */
-	if ((early_pow > late_pow) && (early_pow > peak->gain)) {
-		peak->gain = early_pow;
-		peak->whole = peak->orig - 1;
-		peak->frac = maxidx(early, INTERP_FILT_M);
-	} else if ((late_pow > early_pow) && (late_pow > peak->gain)) {
-		peak->gain = late_pow;
-		peak->whole = peak->orig;
-		peak->frac = maxidx(late, INTERP_FILT_M);
+	if ((early_max > late_max) && (early_max > max)) {
+		peak->gain = early[early_idx];
+		peak->whole = idx - 1;
+		peak->frac = early_idx; 
+	} else if ((late_max > early_max) && (late_max > max)) {
+		peak->gain = late[late_idx];
+		peak->whole = idx; 
+		peak->frac = late_idx; 
 	} else {
-		peak->whole = peak->orig;
+		peak->gain = in->data[idx];
+		peak->whole = idx;
 		peak->frac = 0; 
 	}
 
-	return 0; 
+//	if ((peak->whole > 25) && (peak->whole < 34)) {
+		//DSP_q15tofl(in->data, ((float *) dbg) + 44, 156 * 2);
+		//DSP_q15tofl(early, ((float *) dbg) + 44 + 156, 32 * 2);
+		//DSP_q15tofl(late, ((float *) dbg) + 44 + 156 + 32 * 2, 32 * 2);
+//	}
+
+	return peak->frac; 
 }
 
 void init_peak_detect()
 {
-	int headrm = INTERP_FILT_WIDTH;
-
 	init_interp_filt();
-
-	rvec_init(&pow_vec, DEF_MAXLEN - headrm, DEF_MAXLEN,
-		  headrm, power_buf);
-	memset(pow_vec.buf, 0, pow_vec.buf_len * sizeof(short));
-}
-
-
-/* Consider the case of vector roll off and zero values are included */
-/* Single sided width ignoring the adjacent two samples */
-/* Total must be a factor of 2 */
-/* Single sided width must be '4' */
-int peak_to_mean(struct cxvec * vec, int peak, int idx, int width)
-{
-	int i;
-	int sum = 0;
-
-	for (i = 2; i <= (width + 1); i++) {
-		sum += norm2(vec->data[idx - i]);
-		sum += norm2(vec->data[idx + i]);
-	}
-
-	/* For 8 samples */
-	/* Not square rooting this value so we need to make power comparisons */
-	return ((peak >> 2) > (sum >> 3));
+	memset(pow, 0, DEF_MAXLEN * sizeof(int));
 }

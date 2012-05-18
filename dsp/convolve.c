@@ -26,20 +26,42 @@
 
 extern char *dbg;
 
+int flt_conv_start(float *in, float *h, float *out, int h_len, int in_len)
+{
+	int i, n;
+
+	memset(out, 0, in_len * 2 * sizeof(float));
+
+	for (i = 0; i < in_len; i++) {
+		for (n = 0; n < h_len; n++) {
+			out[2 * i + 0] += in[2 * (i - n) + 0] * h[2 * n];
+			out[2 * i + 1] += in[2 * (i - n) + 1] * h[2 * n];
+		}
+	}
+
+	return in_len;
+}
+
+int flt_conv_no_delay(float *in, float *h, float *out, int h_len, int in_len)
+{
+	flt_conv_start(in + (h_len / 2 - 1) * 2, h, out, h_len, in_len);
+
+	return in_len;
+}
+
 static int cxvec_conv_no_delay(struct cxvec *restrict in,
 			       struct cxvec *restrict h,
 			       struct cxvec *restrict out)
 {
-	if ((cxvec_tailrm(in) < (h->len / 2)) ||
-	    (cxvec_headrm(in) < (h->len / 2 - 1))) {
+	if ((cxvec_tailrm(in) < (h->len / 2 - 1)) ||
+	    (cxvec_headrm(in) < (h->len / 2))) {
 		return -1;
 	}
 
 	cxvec_clear_head(in);
 	cxvec_clear_tail(in);
 
-	/* FIXME: Mysterious 2 sample offset that we need to correct */
-	DSP_fir_cplx((short *) in->data + h->len + 4,
+	DSP_fir_cplx((short *) (in->data + h->len / 2 - 1),
 		     (short *) h->data,
 		     (short *) out->data,
 		     h->len, in->len);
@@ -70,8 +92,9 @@ int cxvec_convolve(struct cxvec *restrict in,
 {
 	int rc;
 
-//	if ((in->len % 4) || (h->len % 2) || (out->len != in->len))
-//		return -1;
+	//if ((in->len % 4) || (h->len % 2) || (out->len != in->len))
+	if ((in->len % 4) || (h->len % 2))
+		return -1;
 
 	switch (type) {
 	case CONV_NO_DELAY:
@@ -87,89 +110,30 @@ int cxvec_convolve(struct cxvec *restrict in,
 	return rc;
 }
 
-static int rvec_conv_no_delay(struct rvec *restrict in,
-		       struct rvec *restrict h,
-		       struct rvec *restrict out)
-{
-	if ((rvec_tailrm(in) < (h->len / 2)) ||
-	    (rvec_headrm(in) < (h->len / 2 - 1))) {
-		return -1;
-	}
-
-	rvec_clear_head(in);
-	rvec_clear_tail(in);
-
-	DSP_fir_r4(in->data - h->len / 2,
-		   h->data,
-		   out->data,
-		   h->len, in->len);
-	return 0;
-}
-
-static int rvec_conv_start(struct rvec *restrict in,
-			   struct rvec *restrict h,
-			   struct rvec *restrict out)
-{
-	if (rvec_headrm(in) < (h->len - 1))
-		return -1;
-
-	rvec_clear_head(in);
-
-	DSP_fir_r4((short *) in->data,
-		   (short *) h->data,
-		   (short *) out->data,
-		   h->len, in->len);
-	return 0;
-}
-
-/*
- * Taps multiple of 4 and >= 8. Data multiples of 4.
- */
-int rvec_convolve(struct rvec *restrict in,
-		  struct rvec *restrict h,
-		  struct rvec *restrict out,
-		  enum conv_type type)
-{
-	int rc;
-
-	if ((in->len % 4) || (h->len % 4) ||
-	    (h->len < 8) || (out->len != in->len)) {
-		return -1;
-	}
-
-	switch (type) {
-	case CONV_NO_DELAY:
-		rc = rvec_conv_no_delay(in, h, out);
-		break;
-	case CONV_START:
-		rc = rvec_conv_start(in, h, out);
-		break;
-	default:
-		rc = -1;
-	}
-
-	return rc;
-}
-
 /*
  * Special case for point interpolation
  */
-int real_convolve2(short *restrict in,
-		   struct rvec *restrict h,
-		   short *restrict out,
-		   enum conv_type type)
+int cx_conv2(complex *restrict in, struct cxvec *restrict h,
+	     complex *restrict out, enum conv_type type)
 {
-	short conv_out[4];
+	complex conv_out[8];
+	//short conv_out[40];
 
-	if ((h->len % 4) || (h->len < 8))
+	if (h->len % 2)
 		return -1;
 
 	switch (type) {
 	case CONV_NO_DELAY:
-		DSP_fir_r4(in - (h->len / 2), h->data, &conv_out, h->len, 4);
+		DSP_fir_cplx((short *) (&in[h->len / 2 - 1]),
+			     (short *) h->data,
+			     (short *) conv_out,
+			     h->len, 8);
 		break;
 	case CONV_START:
-		DSP_fir_r4(in, h->data, &conv_out, h->len, 4);
+		DSP_fir_cplx((short *) in,
+			     (short *) h->data,
+			     (short *) conv_out,
+			     h->len, 4);
 		break;
 	default:
 		return -1;
@@ -191,4 +155,3 @@ int cxvec_correlate(struct cxvec *restrict in,
 
 	return cxvec_convolve(in, h, out, type);
 }
-

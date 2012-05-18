@@ -39,6 +39,8 @@ int gmsk_mod(struct bitvec *restrict bvec,
 	     struct cxvec *restrict h,
 	     struct cxvec *restrict out);
 
+int flt_gmsk_mod(struct bitvec *in, float *h, float *out, int h_len);
+
 int gmsk_demod(struct cxvec *in, struct cxvec *h, struct rvec *out);
 int rach_demod(struct cxvec *in, struct cxvec *h, struct rvec *out);
 

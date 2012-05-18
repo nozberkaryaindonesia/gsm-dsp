@@ -35,19 +35,15 @@ int cxvec_convolve(struct cxvec *restrict in,
 		   struct cxvec *restrict out,
 		   enum conv_type type);
 
-int rvec_convolve(struct rvec *restrict in,
-		  struct rvec *restrict h,
-		  struct rvec *restrict out,
-		  enum conv_type type);
-
-int real_convolve2(short *restrict in,
-		   struct rvec *restrict h,
-		   short *restrict out,
-		   enum conv_type type);
+int cx_conv2(complex *restrict in, struct cxvec *restrict h,
+	     complex *restrict out, enum conv_type type);
 
 int cxvec_correlate(struct cxvec *restrict in,
 		    struct cxvec *restrict h,
 		    struct cxvec *restrict out,
 		    enum conv_type type);
+
+int flt_conv_start(float *in, float *h, float *out, int h_len, int in_len);
+int flt_conv_no_delay(float *in, float *h, float *out, int h_len, int in_len);
 
 #endif /* _CONVOLVE_H_ */

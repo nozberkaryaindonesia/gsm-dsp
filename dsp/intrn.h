@@ -25,7 +25,7 @@
 #ifndef _DSP_INTRN_H_
 #define _DSP_INTRN_H_
 
-#define INTRN_CMPYR
+//#define INTRN_CMPYR
 #define INTRN_SADD
 
 #ifdef INTRN_DOTP2

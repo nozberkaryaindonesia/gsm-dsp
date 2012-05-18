@@ -56,6 +56,18 @@ struct rvec {
 	short _buf[1];
 };
 
+struct test_hdr {
+	short x0;
+	short x1;
+	short x2;
+	short x3;
+	short x4;
+	short x5;
+	short x6;
+	short x7;
+	short x8;
+};
+
 struct bitvec {
         int len;
         int *data;
@@ -89,6 +101,7 @@ int cxvec_rvrs(struct cxvec *vec);
 int cxvec_rvrs_conj(struct cxvec *vec);
 int cxvec_pow(struct cxvec *in, struct rvec *out);
 int cxvec_norm2(struct cxvec *vec);
+int cxvec_scale(struct cxvec *in, struct cxvec *out, complex val, int shft);
 
 /* Real vectors */
 inline int rvec_headrm(struct rvec *vec)
@@ -119,9 +132,5 @@ int norm2(complex val);
 
 /* Floating point */
 float flt_norm2(float *data, int len);
-
-/* Integer */
-int maxval(short *in, int len);
-int maxidx(short *in, int len);
 
 #endif /* _SIGVEC_H_ */
