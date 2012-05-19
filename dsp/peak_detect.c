@@ -70,8 +70,6 @@ static int init_interp_filt()
 		prot_filt_f[i] = sinc(((float) i - midpt) / m);
 	}
 
-	//flt_scale_h(prot_filt_f, prot_filt_len, SCALE_DC_GAIN);
-
 	DSP_fltoq15(prot_filt_f, prot_filt_i, prot_filt_len);
 
 	for (i = 0; i < INTERP_FILT_WIDTH; i++) {
@@ -169,7 +167,6 @@ int cxvec_peak_detect(struct cxvec *in, struct vec_peak *peak)
 
 	/* Drop back one sample so we do early / late  in the same pass */
 	for (i = 0; i < INTERP_FILT_M; i++) {
-		//rc = interp_pts(in, idx, i, &early[i], &late[i]);
 		rc = interp_pts(in, idx, i, &early[i], &late[i]);
 	}
 
@@ -196,12 +193,6 @@ int cxvec_peak_detect(struct cxvec *in, struct vec_peak *peak)
 		peak->whole = idx;
 		peak->frac = 0; 
 	}
-
-//	if ((peak->whole > 25) && (peak->whole < 34)) {
-		//DSP_q15tofl(in->data, ((float *) dbg) + 44, 156 * 2);
-		//DSP_q15tofl(early, ((float *) dbg) + 44 + 156, 32 * 2);
-		//DSP_q15tofl(late, ((float *) dbg) + 44 + 156 + 32 * 2, 32 * 2);
-//	}
 
 	return peak->frac; 
 }

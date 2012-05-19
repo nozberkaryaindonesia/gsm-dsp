@@ -83,16 +83,7 @@ static void init_gsm_pls()
 
 	/* Pulse length of 4 */
 	cxvec_init(&gsm_pls, GSM_PLS_LEN, GSM_PLS_LEN, 0, gsm_pls_data);
-#if 0
-	f_pls[0] = 0.0f;
-	f_pls[1] = 0.0f;
-	f_pls[2] = a * exp(b - c);             /* .1816230 */
-	f_pls[3] = 0.0f; 
-	f_pls[4] = a;                          /* .96 */
-	f_pls[5] = 0.0f; 
-	f_pls[6] = a * exp(b - c);             /* .1816230 */
-	f_pls[7] = 0.0f;
-#else
+
 	f_pls[0] = a * exp(b - c);             /* .1816230 */
 	f_pls[1] = 0.0f; 
 	f_pls[2] = a;                          /* .96 */
@@ -101,9 +92,8 @@ static void init_gsm_pls()
 	f_pls[5] = 0.0f;
 	f_pls[6] = 0.0f;
 	f_pls[7] = 0.0f;
-#endif
-	memcpy(flt_gsm_pls, f_pls, GSM_PLS_LEN * 2 * sizeof(float));
 
+	memcpy(flt_gsm_pls, f_pls, GSM_PLS_LEN * 2 * sizeof(float));
 	vnorm = flt_norm2(f_pls, 2 * GSM_PLS_LEN);
 
 	/* Divide by samples-per-symbol if we supported it */
@@ -114,8 +104,6 @@ static void init_gsm_pls()
 		f_pls[i] /= avg;
 	}
 
-	/* .18276207, .96602073, .18276207 */
-	/* 5989, 31655, 5989 */
 	DSP_fltoq15(f_pls, (short *) gsm_pls.data, 2 * GSM_PLS_LEN);
 
 	return; 
@@ -125,8 +113,8 @@ static void init_gsm()
 {
 	init_dsp();
 	init_gsm_pls();
-	init_rach(&gsm_pls, flt_gsm_pls);
-	init_norm(&gsm_pls, flt_gsm_pls);
+	init_rach(flt_gsm_pls);
+	init_norm(flt_gsm_pls);
 
 	return;
 }
@@ -152,7 +140,7 @@ static int test_tsc(void *in, char *out, struct test_hdr *hdr)
 /* Main entry point */
 int handle_msg(char *in, int in_len, char *out, int out_len)
 {
-	int rc, good;
+	int rc, success;
 	struct gsm_hdr hdr_in;
 	struct gsm_hdr *hdr_out;
 	enum brst_type type;
@@ -167,18 +155,18 @@ int handle_msg(char *in, int in_len, char *out, int out_len)
 	memcpy(&hdr_in, in, sizeof(struct gsm_hdr));
 	type = get_corr_type(&hdr_in);
 
-	good = 1;
+	success = 0;
 
 	switch (type) {
 	case RACH:
 		rc = test_rach(in, out, &hdr_test);
-		if (rc < 0)
-			good = 0;
+		if (rc > 0)
+			success = 1;
 		break;
 	case TSC:
 		rc = test_tsc(in, out, &hdr_test);
-		if (rc < 0)
-			good = 0;
+		if (rc > 0)
+			success = 1;
 		break;
 	default:
 		memset(out, 0, sizeof(struct gsm_hdr));
@@ -186,22 +174,12 @@ int handle_msg(char *in, int in_len, char *out, int out_len)
 	}
 
 	hdr_out = (struct gsm_hdr *) out;
-	if (good) {
+	if (success) {
 		hdr_out->time.tn = hdr_in.time.tn;
 		hdr_out->time.fn = hdr_in.time.fn;
 		hdr_out->data_offset = hdr_in.data_offset;
 		hdr_out->data_len = 156;
 		hdr_out->toa = rc; 
-
-		hdr_out->x0 = hdr_test.x0;
-		hdr_out->x1 = hdr_test.x1;
-		hdr_out->x2 = hdr_test.x2;
-		hdr_out->x3 = hdr_test.x3;
-		hdr_out->x4 = hdr_test.x4;
-		hdr_out->x5 = hdr_test.x5;
-		hdr_out->x6 = hdr_test.x6;
-		hdr_out->x7 = hdr_test.x7;
-		hdr_out->x8 = hdr_test.x8;
 	} else {
 		hdr_out->time.tn = 0; 
 		hdr_out->time.fn = 0;

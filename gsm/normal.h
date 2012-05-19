@@ -25,7 +25,7 @@
 
 #include "../dsp/sigvec.h"
 
-void init_norm(struct cxvec *pls, float *flt_pls);
+void init_norm(float *flt_pls);
 int detect_tsc(struct cxvec *in, struct test_hdr *test);
 
 #endif /* _NORMAL_H_ */

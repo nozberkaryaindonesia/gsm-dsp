@@ -25,7 +25,7 @@
 
 #include "../dsp/sigvec.h"
 
-void init_rach(struct cxvec *pls, float *flt_pls);
+void init_rach(float *flt_pls);
 int detect_rach(struct cxvec *in, struct test_hdr *test);
 
 #endif /* _RACH_H_ */

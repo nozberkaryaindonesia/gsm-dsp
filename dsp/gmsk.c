@@ -152,18 +152,13 @@ int gmsk_mod(struct bitvec *restrict bvec,
 
 	bvec_to_cxvec(bvec, &rot_in);
 
-	/* Frequency shift 1/4 rate up */
 	rotate(&rot_in, &rot_out, FREQ_SHFT_DN);
-
-	//DSP_q15tofl(rot_out.data, dbg, 16 * 2);
 
 	/* Pulse shaping */
 	rc = cxvec_convolve(&rot_out, h, out, CONV_NO_DELAY);
 	if (rc < 0) {
 		return -1;
 	}
-
-	//DSP_q15tofl((short *) out->data, (float *) dbg, 16 * 2);
 
 	return 0;
 }
@@ -197,7 +192,7 @@ int flt_gmsk_mod(struct bitvec *in, float *h, float *out, int h_len)
 	return 0;
 }
 
-static int slice(struct cxvec *in, char *out)
+static int slice(struct cxvec *in, short *out)
 {
 	short i;
 
@@ -205,7 +200,7 @@ static int slice(struct cxvec *in, char *out)
 	for (i = 0; i < in->len; i++) {
 #if 1 
 		if (in->data[i].real > 0)
-			out[i] = 225;
+			out[i] = 32000;
 		else
 			out[i] = 0;
 #else
@@ -214,18 +209,12 @@ static int slice(struct cxvec *in, char *out)
 		else
 			out[i] = in->data[i].real;
 #endif
-#if 0
-		if (in->data[i].real > 0)
-			out[i] = ((2 * in->data[i + 1].real) >> 1) + 16380;
-		else
-			out[i] = (2 * in->data[i + 1].real + 32760) >> 1;
-#endif
 	}
 
 	return 0;
 }
 
-static int slice2(struct cxvec *in, char *out)
+static int slice2(struct cxvec *in, short *out)
 {
 	short i;
 
@@ -233,7 +222,7 @@ static int slice2(struct cxvec *in, char *out)
 	for (i = 0; i < in->len; i++) {
 #if 1 
 		if (in->data[i].imag > 0)
-			out[i] = 225;
+			out[i] = 32000;
 		else
 			out[i] = 0;
 #else
@@ -242,17 +231,20 @@ static int slice2(struct cxvec *in, char *out)
 		else
 			out[i] = in->data[i].imag;
 #endif
-#if 0
-		if (in->data[i].real > 0)
-			out[i] = ((2 * in->data[i + 1].real) >> 1) + 16380;
-		else
-			out[i] = (2 * in->data[i + 1].real + 32760) >> 1;
-#endif
 	}
 
 	return 0;
 }
-#if 1
+
+/*
+ * Linear representation GMSK demodulation
+ *
+ * For theory see:
+ *
+ * P. Laurent, "Exact and Approximate Construction of Digital Phase Modulations by
+ * Superposition of Amplitude Modulated Pulses (AMP)". IEEE Transactions on
+ * Communications. pp. 150-160. February 1986.
+ */
 int gmsk_demod(struct cxvec *in, struct cxvec *h, struct rvec *out)
 {
 	if (in->len > DEF_MAXLEN) {
@@ -260,17 +252,13 @@ int gmsk_demod(struct cxvec *in, struct cxvec *h, struct rvec *out)
 	}
 
 	rot_out.len = out->len;
-
 	memset(rot_out.buf, 0, rot_out.buf_len * sizeof(complex));
 
 	rotate(in, &rot_out, FREQ_SHFT_DN);
-
-	slice(&rot_out, (char *) out->data);
-	//DSP_q15tofl((short *) rot_out.data, (float *) dbg + 44, 156 * 2);
+	slice(&rot_out, out->data);
 
 	return 0;
 }
-#endif
 
 int rach_demod(struct cxvec *in, struct cxvec *h, struct rvec *out)
 {
@@ -279,13 +267,10 @@ int rach_demod(struct cxvec *in, struct cxvec *h, struct rvec *out)
 	}
 
 	rot_out.len = out->len;
-
 	memset(rot_out.buf, 0, rot_out.buf_len * sizeof(complex));
 
 	rotate(in, &rot_out, FREQ_SHFT_DN);
-
-	slice2(&rot_out, (char *) out->data);
-	//DSP_q15tofl((short *) rot_out.data, ((float *) dbg) + 44, 156 * 2);
+	slice2(&rot_out, out->data);
 
 	return 0;
 }

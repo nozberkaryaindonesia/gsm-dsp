@@ -89,27 +89,6 @@ int cxvec_scale_h(struct cxvec *h, enum scale_type type)
 	return 0;
 }
 
-/* Hack */
-int cxvec_rot90(struct cxvec *h)
-{
-	int rc, i;
-	float *flt_in = (float *) malloc(h->len * 2 * sizeof(float));
-	float *flt_out = (float *) malloc(h->len * 2 * sizeof(float));
-
-	DSP_q15tofl(h->data, flt_in, h->len * 2);
-
-	for (i = 0; i < h->len; i++) {
-		flt_out[2 * i + 0] = -flt_in[2 * i + 1];
-		flt_out[2 * i + 1] = flt_in[2 * i + 0];
-	}
-
-	DSP_fltoq15(flt_out, h->data, h->len * 2);
-
-	free(flt_in);
-	free(flt_out);
-	return 0;
-}
-
 void init_dsp()
 {
 	init_gmsk();

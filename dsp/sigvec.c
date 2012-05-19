@@ -113,7 +113,7 @@ float flt_norm2(float *data, int len)
 
 int cxvec_scale(struct cxvec *in_vec, struct cxvec *out_vec, complex val, int shft)
 {
-#if 0
+#ifdef INTRN_CMPYR 
 	int i;
 
 	/* Packed casts */

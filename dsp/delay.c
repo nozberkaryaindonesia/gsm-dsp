@@ -68,18 +68,8 @@ static int init_delay_filt()
 		prot_filt_f[i] = sinc(((float) i - midpt) / m);
 	}
 
-	//flt_scale_h(prot_filt_f, prot_filt_len, SCALE_DC_GAIN);
-
 	DSP_fltoq15(prot_filt_f, prot_filt_i, prot_filt_len);
-#if 0
-	/* Reverse loading */
-	for (i = 0; i < DELAY_FILT_WIDTH; i++) {
-		for (n = 0; n < m; n++) {
-			delay_filt[m-1-n].data[i].real = prot_filt_i[i * m + n];
-			delay_filt[m-1-n].data[i].imag = 0; 
-		}
-	}
-#else
+
 	/* Normal loading */
 	for (i = 0; i < DELAY_FILT_WIDTH; i++) {
 		for (n = 0; n < m; n++) {
@@ -87,7 +77,7 @@ static int init_delay_filt()
 			delay_filt[n].data[i].imag = 0; 
 		}
 	}
-#endif
+
 	free(prot_filt_f);
 	free(prot_filt_i);
 
@@ -96,13 +86,7 @@ static int init_delay_filt()
 
 int cxvec_advance(struct cxvec *in, struct cxvec *out, int whole, int frac)
 {
-#if 0 
-	if ((frac > DELAY_FILT_M) || (cxvec_tailrm(out) < whole)) {
-		return -1;
-	}
-#endif
-//	if (frac > 0)
-		cxvec_convolve(in, &delay_filt[frac], out, CONV_NO_DELAY);
+	cxvec_convolve(in, &delay_filt[frac], out, CONV_NO_DELAY);
 
 	out->start_idx += whole;
 	out->data = &out->buf[out->start_idx];
