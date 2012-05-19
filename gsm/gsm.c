@@ -160,12 +160,12 @@ int handle_msg(char *in, int in_len, char *out, int out_len)
 	switch (type) {
 	case RACH:
 		rc = test_rach(in, out, &hdr_test);
-		if (rc > 0)
+		if (rc > -1)
 			success = 1;
 		break;
 	case TSC:
 		rc = test_tsc(in, out, &hdr_test);
-		if (rc > 0)
+		if (rc > -1)
 			success = 1;
 		break;
 	default:

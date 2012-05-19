@@ -248,7 +248,7 @@ int detect_tsc(struct cxvec *in, struct test_hdr *hdr)
 
 	/* Delay and phase offset compensation */
 	cxvec_advance(in, &delay_brst, peak.whole - NORM_CORR_PEAK, peak.frac);
-	invert_chan(peak.gain, tsc, &conj);
+	rc = invert_chan(peak.gain, tsc, &conj);
 	cxvec_scale(&delay_brst, &phase_brst, conj, rc);
 
 	/* Rotate and slice in GMSK demod */
@@ -257,7 +257,6 @@ int detect_tsc(struct cxvec *in, struct test_hdr *hdr)
 	/* Hack: Output demodulated sequence through the debug path */
 	//memcpy(((float *) dbg) + 44, demod_vec.data, 156 * sizeof(char));
 	DSP_q15tofl(demod_vec.data, ((float *) dbg) + 44, 156);
-
 
 	reset_norm();
 	return (peak.whole - NORM_CORR_PEAK) * 32 + peak.frac; 

@@ -203,8 +203,8 @@ int detect_rach(struct cxvec *in, struct test_hdr *hdr)
 		return -1;
 
 	/* Bound peak and gain to sane values */
-	if (((peak.gain.real * peak.gain.real) + 
-	    (peak.gain.imag * peak.gain.imag)) < RACH_CORR_THRHLD)
+	if ((peak.gain.real * peak.gain.real +
+	     peak.gain.imag * peak.gain.imag) < RACH_CORR_THRHLD)
 		return -1;
 
 	if ((peak.whole < (RACH_CORR_PEAK - 2)) ||
@@ -213,7 +213,7 @@ int detect_rach(struct cxvec *in, struct test_hdr *hdr)
 
 	/* Delay and phase offset compensation */
 	cxvec_advance(in, &delay_brst, peak.whole - RACH_CORR_PEAK, peak.frac);
-	invert_chan(peak.gain, &conj);
+	rc = invert_chan(peak.gain, &conj);
 	cxvec_scale(&delay_brst, &phase_brst, conj, rc);
 
 	/* Rotate and slice in GMSK demod */
