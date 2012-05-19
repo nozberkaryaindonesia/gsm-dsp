@@ -63,16 +63,24 @@ static complex phase_data[DEF_MAXLEN];
 static struct cxvec phase_brst;
 
 /*
- * Bit output
+ * Soft bit output
  */
 short demod_data[DEF_MAXLEN];
 struct rvec demod_vec;
 
 /*
- * Master angle
+ * Phase correction value 
  */
 static complex ang;
 
+/*
+ * Initialize RACH burst correlation sequence.
+ *
+ * The final sequence must be a multiple of 4 for the DSPLIB based cross-
+ * correlation, so use a 44 length sequence. There is a GMSK implementation
+ * hack that stops modulating at 41. Otherwise, garbage from the remaining
+ * three symbols will distort the correlator output.
+ */
 int init_rach_seq(float *flt_pls)
 {
 	int i;
@@ -88,6 +96,7 @@ int init_rach_seq(float *flt_pls)
 	mod_seq = malloc(RACH_SYNC_LEN * 2 * sizeof(float));
 	flt_gmsk_mod(&rach_bvec, flt_pls, mod_seq, 4);
 
+	/* Zero out whatever crap might have been pulled in */
 	mod_seq[2 * 41 + 0] = 0.0;
 	mod_seq[2 * 41 + 1] = 0.0;
 	mod_seq[2 * 42 + 0] = 0.0;
@@ -110,7 +119,12 @@ int init_rach_seq(float *flt_pls)
 		mod_seq[2 * i + 1] /= norm;
 	}
 
-	/* Convert this with intrinsics */
+	/* 
+	 * Manual fixed point conversion with a right shift. We need to make
+	 * sure the autocorrelation peak isn't pegged at the max limit so that
+	 * we have room to shift the input sequence and not overflow when
+	 * inverting the channel value.
+	 */
 	ang.real = (short) ((sum_i / norm) * (float) (32768 / 2));
 	ang.imag = (short) ((sum_q / norm) * (float) (32768 / 2));
 
@@ -217,7 +231,7 @@ int detect_rach(struct cxvec *in, struct test_hdr *hdr)
 	cxvec_scale(&delay_brst, &phase_brst, conj, rc);
 
 	/* Rotate and slice in GMSK demod */
-	rach_demod(&phase_brst, NULL, &demod_vec);
+	rach_demod(&phase_brst, &demod_vec);
 
 	/* Hack: Output demodulated sequence through the debug path */
 	//memcpy(((float *) dbg) + 44, demod_vec.data, 156 * sizeof(char));

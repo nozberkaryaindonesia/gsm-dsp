@@ -16,7 +16,7 @@ static MSGQ_Queue msgq_in;
 void init_input_thrd() 
 {
 	int status;
-	MSGQ_Attrs msgq_attrs;
+	MSGQ_Attrs attrs;
 	SEM_Handle input_sem_hdl;
 
 	input_sem_hdl = SEM_create(0, NULL);
@@ -25,12 +25,12 @@ void init_input_thrd()
 		SYS_abort("Semaphore creation failed");
 	}
 
-	msgq_attrs = MSGQ_ATTRS;
-	msgq_attrs.notifyHandle = (Ptr) input_sem_hdl;
-	msgq_attrs.pend = (MSGQ_Pend) SEM_pendBinary;
-	msgq_attrs.post = (MSGQ_Post) SEM_postBinary;
+	attrs = MSGQ_ATTRS;
+	attrs.notifyHandle = (Ptr) input_sem_hdl;
+	attrs.pend = (MSGQ_Pend) SEM_pendBinary;
+	attrs.post = (MSGQ_Post) SEM_postBinary;
 
-	status = MSGQ_open("inputDSP", &msgq_in, &msgq_attrs);
+	status = MSGQ_open("inputDSP", &msgq_in, &attrs);
 	if (status != SYS_OK) {
 		SYS_abort("Failed to open the inputDSP message queue");
 	}
@@ -38,22 +38,21 @@ void init_input_thrd()
 
 void input_thrd()
 {
-	struct link_msg *msg, *procMsg, *gppMsg;
-	int status;
-	MSGQ_Queue procMsgQueue;
-	MSGQ_Queue gppMsgQueue;
-	MSGQ_LocateAttrs syncLocateAttrs;
-	Int msgId;
+	struct link_msg *msg, *proc_msg, *gpp_msg;
+	int status, msg_id;
+	MSGQ_Queue proc_msgq;
+	MSGQ_Queue gpp_msgq;
+	MSGQ_LocateAttrs attrs;
 
-	status = MSGQ_locate("processDSP", &procMsgQueue, NULL);
+	status = MSGQ_locate("processDSP", &proc_msgq, NULL);
 	if (status != SYS_OK) {
 		SYS_abort("Failed to locate the process message queue");
 	 }
 	
 	status = SYS_ENOTFOUND;
 	while ((status == SYS_ENOTFOUND) || (status == SYS_ENODEV)) {
-		syncLocateAttrs.timeout = SYS_FOREVER;
-		status = MSGQ_locate("outputGPP", &gppMsgQueue, &syncLocateAttrs);
+		attrs.timeout = SYS_FOREVER;
+		status = MSGQ_locate("outputGPP", &gpp_msgq, &attrs);
 		if ((status == SYS_ENOTFOUND) || (status == SYS_ENODEV)) {
 			TSK_sleep(1000);
 		}
@@ -62,21 +61,21 @@ void input_thrd()
 		}
 	}
 
-	status = MSGQ_alloc(0, (MSGQ_Msg *) &procMsg, APPMSGSIZE);
+	status = MSGQ_alloc(0, (MSGQ_Msg *) &proc_msg, APPMSGSIZE);
 	if (status != SYS_OK) {
 		SYS_abort("Failed to allocate a message");
 	}
 
-	MSGQ_setMsgId((MSGQ_Msg) procMsg, DSP_INPUTMSGID);
-	procMsg->data = NULL;
+	MSGQ_setMsgId((MSGQ_Msg) proc_msg, DSP_INPUTMSGID);
+	proc_msg->data = NULL;
 
-	status = MSGQ_put(gppMsgQueue, (MSGQ_Msg) procMsg);
+	status = MSGQ_put(gpp_msgq, (MSGQ_Msg) proc_msg);
 	if (status != SYS_OK) {
 		SYS_abort("Failed to send a message");
 	}
 
-	procMsg = NULL;
-	gppMsg = NULL;
+	proc_msg = NULL;
+	gpp_msg = NULL;
 
 	for (;;) {
 		status = MSGQ_get(msgq_in, (MSGQ_Msg *) &msg, SYS_FOREVER);
@@ -84,19 +83,19 @@ void input_thrd()
 			SYS_abort("Failed to get a message from GPP");
 		}
 		
-		msgId = MSGQ_getMsgId((MSGQ_Msg) msg);
+		msg_id = MSGQ_getMsgId((MSGQ_Msg) msg);
 		
-		switch (msgId) {
+		switch (msg_id) {
 		case GPP_OUTPUTMSGID:
 			BCACHE_inv(msg->data, BUFSIZE, TRUE);
-			gppMsg = msg;
+			gpp_msg = msg;
 			break;
 		case DSP_PROCESSMSGID:
-			procMsg = msg;
+			proc_msg = msg;
 			break;
 		case TERMINATEMSGID:
-			procMsg = msg;
-			status = MSGQ_put(gppMsgQueue, (MSGQ_Msg) procMsg);
+			proc_msg = msg;
+			status = MSGQ_put(gpp_msgq, (MSGQ_Msg) proc_msg);
 			if (status != SYS_OK) {
 				SYS_abort("Failed to send a GPP message back");
 			}
@@ -105,22 +104,21 @@ void input_thrd()
 			break;
 		}
 		
-		if ((procMsg != NULL) && (gppMsg != NULL)) {
-			status = MSGQ_put(gppMsgQueue, (MSGQ_Msg) procMsg);
+		if ((proc_msg != NULL) && (gpp_msg != NULL)) {
+			status = MSGQ_put(gpp_msgq, (MSGQ_Msg) proc_msg);
 			if (status != SYS_OK) {
 				SYS_abort("Failed to send a GPP message back");
 			}
 
-			MSGQ_setMsgId((MSGQ_Msg) gppMsg, DSP_INPUTMSGID);
+			MSGQ_setMsgId((MSGQ_Msg) gpp_msg, DSP_INPUTMSGID);
 
-			status = MSGQ_put(procMsgQueue, (MSGQ_Msg) gppMsg);
+			status = MSGQ_put(proc_msgq, (MSGQ_Msg) gpp_msg);
 			if (status != SYS_OK) {
 				SYS_abort("Failed to send a message to process function");
 			}
-			LOG_printf(&trace, "Sending input msg to Processing TSK");
 
-			procMsg = NULL;
-			gppMsg = NULL;
+			proc_msg = NULL;
+			gpp_msg = NULL;
 		}
 	}
 }

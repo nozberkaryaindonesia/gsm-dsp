@@ -14,7 +14,7 @@ static MSGQ_Queue msgq_proc;
 void init_proc_thrd()
 {
 	int status;
-	MSGQ_Attrs msgq_attrs;
+	MSGQ_Attrs attrs;
 	SEM_Handle proc_sem_hdl;
 
 	proc_sem_hdl = SEM_create(0, NULL);
@@ -23,35 +23,23 @@ void init_proc_thrd()
 		SYS_abort("Semaphore creation failed");
 	}
 
-	msgq_attrs = MSGQ_ATTRS;
-	msgq_attrs.notifyHandle = (Ptr) proc_sem_hdl;
-	msgq_attrs.pend = (MSGQ_Pend) SEM_pendBinary;
-	msgq_attrs.post = (MSGQ_Post) SEM_postBinary;
+	attrs = MSGQ_ATTRS;
+	attrs.notifyHandle = (Ptr) proc_sem_hdl;
+	attrs.pend = (MSGQ_Pend) SEM_pendBinary;
+	attrs.post = (MSGQ_Post) SEM_postBinary;
 
-	status = MSGQ_open("processDSP", &msgq_proc, &msgq_attrs);
+	status = MSGQ_open("processDSP", &msgq_proc, &attrs);
 	if (status != SYS_OK) {
 		SYS_abort("Failed to open the process message queue");
-	}
-}
-
-void write_test(float *buf, int len, int val)
-{
-	int i;
-
-	for (i=0; i < len; i++) {
-		buf[2*i + 0] = (float) val;
-		buf[2*i + 1] = (float) val;
 	}
 }
 
 void proc_thrd()
 {	
 	struct link_msg *msg, *msg_dsp_in, *msg_dsp_out;
-	int status;
+	int status, msg_id, msg_cnt;
 	MSGQ_Queue msgq_dsp_out;
 	MSGQ_Queue msgq_dsp_in;
-	int msg_id;
-	int msg_cnt = 0;
 
 	status = MSGQ_locate("outputDSP", &msgq_dsp_out, NULL);
 	if (status != SYS_OK) {
@@ -78,6 +66,7 @@ void proc_thrd()
 
 	msg_dsp_in = NULL;
 	msg_dsp_out = NULL;
+	msg_cnt = 0;
 
 	for (;;) {
 		status = MSGQ_get(msgq_proc, (MSGQ_Msg *) &msg, SYS_FOREVER);
@@ -102,7 +91,6 @@ void proc_thrd()
 		if ((msg_dsp_in != NULL) && (msg_dsp_out != NULL)) {
 			if (msg_cnt > 0) {
 				handle_msg(msg_dsp_in->data, 0, msg_dsp_out->data, 0);
-				//write_test((float *) msg_dsp_out->data, 32 * 2, msg_cnt);
 			}
 			msg_cnt++;
 
@@ -111,7 +99,6 @@ void proc_thrd()
 
 			MSGQ_setMsgId((MSGQ_Msg)msg_dsp_out, DSP_PROCESSMSGID);
 			status = MSGQ_put(msgq_dsp_out, (MSGQ_Msg) msg_dsp_out);
-			LOG_printf(&trace, "Process and passed msg with buffer");
 
 			msg_dsp_in = NULL;
 			msg_dsp_out = NULL;

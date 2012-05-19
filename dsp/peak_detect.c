@@ -136,7 +136,8 @@ static int cx_maxidx(complex *in, int len)
  * end and a minimally padded vector will still roll off the end
  * before it gets to the center tap.
  */
-static int interp_pts(struct cxvec *in, int idx, int frac, complex *early, complex *late)
+static int interp_pts(struct cxvec *in, int idx,
+		      int frac, complex *early, complex *late)
 {
 	int rc;
 
@@ -152,7 +153,7 @@ static int interp_pts(struct cxvec *in, int idx, int frac, complex *early, compl
 
 int cxvec_peak_detect(struct cxvec *in, struct vec_peak *peak)
 {
-	int i, rc;
+	int i;
 	int idx, early_idx, late_idx;
 	int max, early_max, late_max;
 
@@ -167,7 +168,7 @@ int cxvec_peak_detect(struct cxvec *in, struct vec_peak *peak)
 
 	/* Drop back one sample so we do early / late  in the same pass */
 	for (i = 0; i < INTERP_FILT_M; i++) {
-		rc = interp_pts(in, idx, i, &early[i], &late[i]);
+		interp_pts(in, idx, i, &early[i], &late[i]);
 	}
 
 	early_idx = cx_maxidx(early, INTERP_FILT_M);

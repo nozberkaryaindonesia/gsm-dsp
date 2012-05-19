@@ -252,7 +252,7 @@ int detect_tsc(struct cxvec *in, struct test_hdr *hdr)
 	cxvec_scale(&delay_brst, &phase_brst, conj, rc);
 
 	/* Rotate and slice in GMSK demod */
-	gmsk_demod(&phase_brst, NULL, &demod_vec);
+	gmsk_demod(&phase_brst, &demod_vec);
 
 	/* Hack: Output demodulated sequence through the debug path */
 	//memcpy(((float *) dbg) + 44, demod_vec.data, 156 * sizeof(char));

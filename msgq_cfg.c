@@ -8,25 +8,25 @@
 #define NUMALLOCATORS		1
 #define NUMMSGQUEUES		6
 
-static ZCPYMQT_Params mqtParams = {APP_POOL_ID};
+static ZCPYMQT_Params mqt_params = {APP_POOL_ID};
 
-static SMAPOOL_Params smaPoolParams = {	0, TRUE };
+static SMAPOOL_Params sma_pool_params = { 0, TRUE };
 
-static MSGQ_Obj msgQueues[NUMMSGQUEUES];
+static MSGQ_Obj msgqs[NUMMSGQUEUES];
 
 static MSGQ_TransportObj transports[MAX_PROCESSORS] = {
 	MSGQ_NOTRANSPORT,
 	{
 		ZCPYMQT_init,
 		&ZCPYMQT_FXNS,
-		&mqtParams,
+		&mqt_params,
 		NULL,
 		ID_GPP
 	}
 };
 
 MSGQ_Config MSGQ_config = {
-	msgQueues,
+	msgqs,
 	transports,
 	NUMMSGQUEUES,
 	MAX_PROCESSORS,
@@ -39,7 +39,7 @@ static POOL_Obj allocators[NUMALLOCATORS] = {
 	{
 		SMAPOOL_init,
 		(POOL_Fxns *)&SMAPOOL_FXNS,
-		&smaPoolParams,
+		&sma_pool_params,
 		NULL,
 	}
 };

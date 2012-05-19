@@ -26,6 +26,10 @@
 
 extern char *dbg;
 
+/*
+ * Floating point complex-real convolution used for initialization.
+ * Start convolve at tap number 0.
+ */
 int flt_conv_start(float *in, float *h, float *out, int h_len, int in_len)
 {
 	int i, n;
@@ -42,6 +46,11 @@ int flt_conv_start(float *in, float *h, float *out, int h_len, int in_len)
 	return in_len;
 }
 
+/*
+ * Floating point complex-real convolution used for initialization.
+ * Start convolve at center tap (number of taps / 2 - 1) where the number of
+ * taps is even.
+ */
 int flt_conv_no_delay(float *in, float *h, float *out, int h_len, int in_len)
 {
 	flt_conv_start(in + (h_len / 2 - 1) * 2, h, out, h_len, in_len);
@@ -85,6 +94,9 @@ static int cxvec_conv_start(struct cxvec *restrict in,
 	return 0;
 }
 
+/*
+ * Fixed point Q15 Complex-complex convolution
+ */
 int cxvec_convolve(struct cxvec *restrict in,
 		   struct cxvec *restrict h,
 		   struct cxvec *restrict out,
@@ -111,13 +123,12 @@ int cxvec_convolve(struct cxvec *restrict in,
 }
 
 /*
- * Special case for point interpolation
+ * Special case Q15 point interpolation
  */
 int cx_conv2(complex *restrict in, struct cxvec *restrict h,
 	     complex *restrict out, enum conv_type type)
 {
 	complex conv_out[8];
-	//short conv_out[40];
 
 	if (h->len % 2)
 		return -1;
@@ -145,6 +156,10 @@ int cx_conv2(complex *restrict in, struct cxvec *restrict h,
 	return 0;
 }
 
+/*
+ * Fixed point Q15 complex correlation
+ * Second vector 'h' must be stored in reverse
+ */
 int cxvec_correlate(struct cxvec *restrict in,
 		    struct cxvec *restrict h,
 		    struct cxvec *restrict out,

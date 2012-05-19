@@ -123,25 +123,14 @@ void rotate(struct cxvec *restrict in_vec,
 #endif
 }
 
-static inline void bvec_to_cxvec(struct bitvec *bvec, struct cxvec *cvec)
-{
-	int i;
-
-	for (i = 0; i < bvec->len; i++) {
-		cvec->data[i].real = (2 * bvec->data[i] - 1) * (1 << 12);
-		cvec->data[i].imag = 0;
-	}
-}
-
 /*
- * Modulate a bit vector with GMSK. We only need this for the correlation
- * sequences where no guard interval is necessary.
+ * Fixed-point GMSK modulation (unused)
  */
 int gmsk_mod(struct bitvec *restrict bvec,
 	     struct cxvec *restrict h,
 	     struct cxvec *restrict out)
 {
-	int rc;
+	int i, rc;
 
 	if (bvec->len > DEF_MAXLEN) {
 		return -1;
@@ -150,11 +139,13 @@ int gmsk_mod(struct bitvec *restrict bvec,
 	rot_in.len = out->len;
 	rot_out.len = out->len;
 
-	bvec_to_cxvec(bvec, &rot_in);
+	for (i = 0; i < bvec->len; i++) {
+		rot_in.data[i].real = (2 * bvec->data[i] - 1) * (1 << 12);
+		rot_in.data[i].imag = 0;
+	}
 
 	rotate(&rot_in, &rot_out, FREQ_SHFT_DN);
 
-	/* Pulse shaping */
 	rc = cxvec_convolve(&rot_out, h, out, CONV_NO_DELAY);
 	if (rc < 0) {
 		return -1;
@@ -167,20 +158,27 @@ int flt_gmsk_mod(struct bitvec *in, float *h, float *out, int h_len)
 {
 	float sym;
 	float *buf, *data;
-	int i, buf_len;
-	int hack;
+	int i, len;
 
 	buf = malloc((in->len + h_len) * 2 * sizeof(float));
 	data = &buf[h_len / 2 * 2];
 
+	/*
+	 * Zero out the input buffer to pulse shaping filter. We'll fill in the
+	 * main sequence values, so we only really need to clear out the head
+	 * and tail values.
+	 */
 	memset(buf, 0, (in->len + h_len) * 2 * sizeof(float));
 
+	/*
+	 * For RACH case, modulate only the actual and not appended junk bits
+	 */
 	if (in->len == 44)
-		hack = 41;
+		len = 41;
 	else
-		hack = in->len;
+		len = in->len;
 
-	for (i = 0; i < hack; i++) {
+	for (i = 0; i < len; i++) {
 		sym = (float) (2 * in->data[i] - 1); 
 		data[2 * i + 0] = sym * cos(2 * M_PIf*((float) -i / 4.0));
 		data[2 * i + 1] = sym * sin(2 * M_PIf*((float) -i / 4.0));
@@ -192,11 +190,13 @@ int flt_gmsk_mod(struct bitvec *in, float *h, float *out, int h_len)
 	return 0;
 }
 
-static int slice(struct cxvec *in, short *out)
+/*
+ * Hard decision slice until proper phase / scaling is worked out
+ */
+static int norm_slice(struct cxvec *in, short *out)
 {
 	short i;
 
-	/* Hack */
 	for (i = 0; i < in->len; i++) {
 #if 1 
 		if (in->data[i].real > 0)
@@ -214,11 +214,10 @@ static int slice(struct cxvec *in, short *out)
 	return 0;
 }
 
-static int slice2(struct cxvec *in, short *out)
+static int rach_slice(struct cxvec *in, short *out)
 {
 	short i;
 
-	/* Hack */
 	for (i = 0; i < in->len; i++) {
 #if 1 
 		if (in->data[i].imag > 0)
@@ -245,7 +244,7 @@ static int slice2(struct cxvec *in, short *out)
  * Superposition of Amplitude Modulated Pulses (AMP)". IEEE Transactions on
  * Communications. pp. 150-160. February 1986.
  */
-int gmsk_demod(struct cxvec *in, struct cxvec *h, struct rvec *out)
+int gmsk_demod(struct cxvec *in, struct rvec *out)
 {
 	if (in->len > DEF_MAXLEN) {
 		return -1;
@@ -255,12 +254,15 @@ int gmsk_demod(struct cxvec *in, struct cxvec *h, struct rvec *out)
 	memset(rot_out.buf, 0, rot_out.buf_len * sizeof(complex));
 
 	rotate(in, &rot_out, FREQ_SHFT_DN);
-	slice(&rot_out, out->data);
+	norm_slice(&rot_out, out->data);
 
 	return 0;
 }
 
-int rach_demod(struct cxvec *in, struct cxvec *h, struct rvec *out)
+/*
+ * Handle RACH and normal bursts independently for now 
+ */
+int rach_demod(struct cxvec *in, struct rvec *out)
 {
 	if (in->len > DEF_MAXLEN) {
 		return -1;
@@ -270,7 +272,7 @@ int rach_demod(struct cxvec *in, struct cxvec *h, struct rvec *out)
 	memset(rot_out.buf, 0, rot_out.buf_len * sizeof(complex));
 
 	rotate(in, &rot_out, FREQ_SHFT_DN);
-	slice2(&rot_out, out->data);
+	rach_slice(&rot_out, out->data);
 
 	return 0;
 }

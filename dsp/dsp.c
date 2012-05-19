@@ -72,7 +72,7 @@ int flt_scale_h(float *h, int len, enum scale_type type)
 
 int cxvec_scale_h(struct cxvec *h, enum scale_type type)
 {
-	int rc, i;
+	int rc;
 	float *flt_h = (float *) malloc(h->len * 2 * sizeof(float));
 
 	DSP_q15tofl(h->data, flt_h, h->len * 2);

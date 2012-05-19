@@ -16,26 +16,24 @@
 static MSGQ_Queue msgq_out;
 extern LOG_Obj trace;
 
-extern void write_test(float *buf, int len, int val);
-
 void init_output_thrd()
 {
 	int status;
-	MSGQ_Attrs msgq_attrs;
-	SEM_Handle ouput_sem_hdl;
+	MSGQ_Attrs attrs;
+	SEM_Handle output_sem_hdl;
 
-	ouput_sem_hdl = SEM_create(0, NULL);
+	output_sem_hdl = SEM_create(0, NULL);
 	
-	if (ouput_sem_hdl == NULL) {
+	if (output_sem_hdl == NULL) {
 		SYS_abort("Semaphore creation failed");
 	}
 
-	msgq_attrs = MSGQ_ATTRS;
-	msgq_attrs.notifyHandle = (Ptr) ouput_sem_hdl;
-	msgq_attrs.pend = (MSGQ_Pend) SEM_pendBinary;
-	msgq_attrs.post = (MSGQ_Post) SEM_postBinary;
+	attrs = MSGQ_ATTRS;
+	attrs.notifyHandle = (Ptr) output_sem_hdl;
+	attrs.pend = (MSGQ_Pend) SEM_pendBinary;
+	attrs.post = (MSGQ_Post) SEM_postBinary;
 
-	status = MSGQ_open("outputDSP", &msgq_out, &msgq_attrs);
+	status = MSGQ_open("outputDSP", &msgq_out, &attrs);
 	if (status != SYS_OK) {
 		SYS_abort("Failed to open the DSP output message queue");
 	}
@@ -44,11 +42,10 @@ void init_output_thrd()
 void output_thrd()
 {
 	struct link_msg *msg, *msg_gpp, *msg_proc;
-	int i, status, msg_id;
+	int i, status, msg_id, msg_cnt;
 	MSGQ_Queue msgq_proc_dsp;
 	MSGQ_Queue msgq_gpp_in;
-	MSGQ_LocateAttrs sync_locate_attrs;
-	int msg_cnt = 0;
+	MSGQ_LocateAttrs attrs;
 
 	status = MSGQ_locate("processDSP", &msgq_proc_dsp, NULL);
 
@@ -58,8 +55,8 @@ void output_thrd()
 
 	status = SYS_ENOTFOUND;
 	while ((status == SYS_ENOTFOUND) || (status == SYS_ENODEV)) {
-		sync_locate_attrs.timeout = SYS_FOREVER;
-		status = MSGQ_locate("inputGPP", &msgq_gpp_in, &sync_locate_attrs);
+		attrs.timeout = SYS_FOREVER;
+		status = MSGQ_locate("inputGPP", &msgq_gpp_in, &attrs);
 		if ((status == SYS_ENOTFOUND) || (status == SYS_ENODEV)) {
 			TSK_sleep(1000);
 		}
@@ -85,6 +82,7 @@ void output_thrd()
 
 	msg_proc = NULL;
 	msg_gpp = NULL;
+	msg_cnt = 0;
 
 	for (;;) {
 		status = MSGQ_get(msgq_out, (MSGQ_Msg *)&msg, SYS_FOREVER);
@@ -105,8 +103,6 @@ void output_thrd()
 			break;
 		}
 
-		LOG_printf(&trace, "Received message from TSK");
-
 		if ((msg_proc != NULL) && (msg_gpp != NULL)) {
 			MSGQ_setMsgId((MSGQ_Msg) msg_gpp, DSP_OUTPUTMSGID);
 		
@@ -116,7 +112,6 @@ void output_thrd()
 			}
 
 			if (msg_cnt > 0) {
-				//write_test((float *) msg_proc->data, 32 * 2, msg_cnt);
 				BCACHE_wb(msg_proc->data, BUFSIZE, TRUE);
 			}
 			msg_cnt++;

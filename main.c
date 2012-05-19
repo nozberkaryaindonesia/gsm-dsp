@@ -15,24 +15,12 @@ extern void output_thrd();
 extern LOG_Obj trace;
 static void init_thrds();
 
-#define DEBUG_DSP 0
-
-#if DEBUG_DSP
-volatile int flag = 1;
-#endif
-
 void main() 
 {
 	TSK_Attrs attrs = TSK_ATTRS;
 
-#if DEBUG_DSP
-	while (flag);
-#endif
-
-	LOG_printf(&trace,"DSPLINK init called \n");
 	DSPLINK_init() ;
 
-	LOG_printf(&trace,"Calling Thread init functions\n");
 	init_input_thrd();
 	init_output_thrd();
 	init_proc_thrd();
